@@ -20,7 +20,7 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - **Database**: SQLite OR MariaDB (user configurable)
 - **Authentication**: Basic user auth with single role + setup wizard
 - **Web Interface**: Modern responsive design for mobile/desktop
-- **Configuration**: File-based config including port settings (default :2341)
+- **Configuration**: File-based config including port settings (default :2342)
 - **Deployment**: Single executable + service configuration
 - **Data Migration**: Version tracking with database migrations
 - **Units**: User-selectable display units (Imperial/Metric) with proper conversions
@@ -165,6 +165,7 @@ Based on requirements.md analysis - building a web application called "Waterlogg
    - RESTful APIs for all entities
    - Input validation and sanitization
    - Error handling middleware
+   - Command-line utilities (password reset, database migration, data export/import)
 
 3. **Water Chemistry Calculations**
    - Implement LSI and RSI calculation functions
@@ -232,7 +233,7 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 ### Packaging & Distribution
 - **Cross-Platform Binary**: Go's static compilation for Linux + Windows deployment
 - **Embedded Assets**: Static files embedded in executable
-- **Configuration**: External YAML file for runtime settings (database type, port :2341)
+- **Configuration**: External YAML file for runtime settings (database type, port :2342)
 - **Service Integration**: Systemd (Linux) and Windows Service support
 - **Setup Wizard**: Comprehensive first-run wizard (admin user + database + config)
 - **Database Migration**: Bidirectional utility for SQLite ↔ MariaDB data transfer
@@ -315,7 +316,7 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - **Exports**: All data, all pools; WL[timestamp] naming convention
 - **Platform**: Cross-platform support (Linux + Windows)
 - **Database**: Configurable SQLite OR MariaDB
-- **Port**: Default :2341
+- **Port**: Default :2342
 - **UI**: Required fields marked with red asterisks
 
 #### Final Clarifications
@@ -327,4 +328,6 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - **Export Format**: Filename WL20240714_143022.xlsx format
 - **Markdown Export**: Include calculated indices (LSI/RSI) as separate section
 - **Setup Wizard**: Configure database type, connection details, and all configuration options
-- **Password Security**: Basic complexity constraints (length, special characters, etc.)
+- **Password Security**: ~~Basic complexity constraints (length, special characters, etc.)~~ **REMOVED** - Now accepts any non-empty password for simplicity
+- **Port Configuration**: Changed from :2341 to :2342 as the default port
+- **Password Reset**: Command-line utility for resetting user passwords (`./waterlogger -reset-password username`)

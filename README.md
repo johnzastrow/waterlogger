@@ -54,7 +54,7 @@ go build -o waterlogger cmd/waterlogger/main.go
 ### First Run
 
 1. Start the application
-2. Open your web browser to `http://localhost:2341`
+2. Open your web browser to `http://localhost:2342`
 3. Complete the setup wizard to:
    - Create an administrator account
    - Configure database settings
@@ -183,7 +183,7 @@ The application uses a YAML configuration file (`config.yaml`) with the followin
 
 ```yaml
 server:
-  port: 2341
+  port: 2342
   host: "localhost"
 
 database:
@@ -209,9 +209,44 @@ app:
 waterlogger [options]
 
 Options:
-  -config string    Path to configuration file (default: config.yaml)
-  -version          Show version information
-  -help             Show help message
+  -config string           Path to configuration file (default: config.yaml)
+  -version                 Show version information
+  -help                    Show help message
+  -migrate-to-mariadb      Migrate data from SQLite to MariaDB
+  -migrate-to-sqlite       Migrate data from MariaDB to SQLite
+  -export string           Export database data to backup file
+  -import string           Import database data from backup file
+  -reset-password string   Reset password for specified username
+```
+
+### Password Management
+
+#### Resetting User Passwords
+
+If you need to reset a user's password (e.g., if they forgot it), you can use the command-line password reset utility:
+
+```bash
+# Reset password for a specific user
+./waterlogger -reset-password username
+
+# Example: Reset password for user "jcz"
+./waterlogger -reset-password jcz
+```
+
+The utility will prompt you to:
+1. Enter a new password
+2. Confirm the new password
+
+**Note**: Passwords can be simple (no complexity requirements) - they only need to be non-empty.
+
+#### Interactive vs Non-Interactive Mode
+
+- **Interactive Mode**: When run in a terminal, the utility will securely prompt for password input (hidden typing)
+- **Non-Interactive Mode**: When input is piped or redirected, it will read the password directly from stdin
+
+Example of non-interactive usage:
+```bash
+echo "newpassword" | ./waterlogger -reset-password username
 ```
 
 ### Database Setup
@@ -343,7 +378,7 @@ go test -tags integration ./...
 ### Common Issues
 
 #### Port Already in Use
-If port 2341 is already in use, modify the configuration file:
+If port 2342 is already in use, modify the configuration file:
 ```yaml
 server:
   port: 3000  # Change to available port
