@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"waterlogger/internal/chemistry"
 	"waterlogger/internal/config"
 	"waterlogger/internal/middleware"
 	"waterlogger/internal/models"
@@ -277,8 +280,37 @@ func (h *Handlers) CreateSample(c *gin.Context) {
 		return
 	}
 
+	// Create sample in database first
 	if err := h.db.Create(&sample).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sample"})
+		return
+	}
+
+	// Create measurements if provided
+	if sample.Measurements != nil {
+		sample.Measurements.SampleID = sample.ID
+		if err := h.db.Create(sample.Measurements).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create measurements"})
+			return
+		}
+
+		// Calculate water chemistry indices if we have the minimum required data
+		if sample.Measurements.PH != 0 {
+			if indices, err := chemistry.CalculateIndices(sample.Measurements); err == nil {
+				indices.SampleID = sample.ID
+				if err := h.db.Create(indices).Error; err != nil {
+					// Log error but don't fail the request
+					fmt.Printf("Warning: Failed to create indices: %v\n", err)
+				} else {
+					sample.Indices = indices
+				}
+			}
+		}
+	}
+
+	// Load the complete sample with all relationships
+	if err := h.db.Preload("Pool").Preload("Measurements").Preload("Indices").First(&sample, sample.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load complete sample"})
 		return
 	}
 
@@ -293,7 +325,7 @@ func (h *Handlers) UpdateSample(c *gin.Context) {
 	}
 
 	var sample models.Sample
-	if err := h.db.First(&sample, uint(id)).Error; err != nil {
+	if err := h.db.Preload("Measurements").Preload("Indices").First(&sample, uint(id)).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Sample not found"})
 		return
 	}
@@ -303,8 +335,40 @@ func (h *Handlers) UpdateSample(c *gin.Context) {
 		return
 	}
 
+	// Update sample
 	if err := h.db.Save(&sample).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update sample"})
+		return
+	}
+
+	// Update or create measurements if provided
+	if sample.Measurements != nil {
+		sample.Measurements.SampleID = sample.ID
+		if err := h.db.Save(sample.Measurements).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update measurements"})
+			return
+		}
+
+		// Recalculate indices if we have pH data
+		if sample.Measurements.PH != 0 {
+			if indices, err := chemistry.CalculateIndices(sample.Measurements); err == nil {
+				indices.SampleID = sample.ID
+				
+				// Delete existing indices and create new ones
+				h.db.Where("sample_id = ?", sample.ID).Delete(&models.Indices{})
+				
+				if err := h.db.Create(indices).Error; err != nil {
+					fmt.Printf("Warning: Failed to update indices: %v\n", err)
+				} else {
+					sample.Indices = indices
+				}
+			}
+		}
+	}
+
+	// Load the complete updated sample with all relationships
+	if err := h.db.Preload("Pool").Preload("Measurements").Preload("Indices").First(&sample, sample.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load updated sample"})
 		return
 	}
 
@@ -388,15 +452,243 @@ func (h *Handlers) DeleteKit(c *gin.Context) {
 }
 
 func (h *Handlers) GetChartData(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	poolID := c.Query("pool_id")
+	parameter := c.Query("parameter")
+	
+	if poolID == "" || parameter == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pool_id and parameter are required"})
+		return
+	}
+	
+	// Get samples with measurements for the specified pool
+	var samples []models.Sample
+	query := h.db.Preload("Measurements").Preload("Indices").Where("pool_id = ?", poolID)
+	
+	// Add date range filter if provided
+	if startDate := c.Query("start_date"); startDate != "" {
+		query = query.Where("sample_datetime >= ?", startDate)
+	}
+	if endDate := c.Query("end_date"); endDate != "" {
+		query = query.Where("sample_datetime <= ?", endDate)
+	}
+	
+	if err := query.Order("sample_datetime ASC").Find(&samples).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch chart data"})
+		return
+	}
+	
+	// Extract data points for the specified parameter
+	var dataPoints []map[string]interface{}
+	
+	for _, sample := range samples {
+		point := map[string]interface{}{
+			"date": sample.SampleDateTime,
+		}
+		
+		// Get the value based on the parameter
+		if sample.Measurements != nil {
+			switch parameter {
+			case "ph":
+				point["value"] = sample.Measurements.PH
+			case "fc":
+				point["value"] = sample.Measurements.FC
+			case "tc":
+				point["value"] = sample.Measurements.TC
+			case "ta":
+				point["value"] = sample.Measurements.TA
+			case "ch":
+				point["value"] = sample.Measurements.CH
+			case "cya":
+				if sample.Measurements.CYA != nil {
+					point["value"] = *sample.Measurements.CYA
+				}
+			case "temperature":
+				point["value"] = sample.Measurements.Temperature
+			case "salinity":
+				if sample.Measurements.Salinity != nil {
+					point["value"] = *sample.Measurements.Salinity
+				}
+			}
+		}
+		
+		// Add indices data
+		if sample.Indices != nil {
+			if parameter == "lsi" && sample.Indices.LSI != nil {
+				point["value"] = *sample.Indices.LSI
+			} else if parameter == "rsi" && sample.Indices.RSI != nil {
+				point["value"] = *sample.Indices.RSI
+			}
+		}
+		
+		// Only add point if it has a value
+		if point["value"] != nil {
+			dataPoints = append(dataPoints, point)
+		}
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"parameter": parameter,
+		"pool_id":   poolID,
+		"data":      dataPoints,
+	})
 }
 
 func (h *Handlers) ExportExcel(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	// Get samples with related data
+	var samples []models.Sample
+	if err := h.db.Preload("Pool").Preload("Measurements").Preload("Indices").Find(&samples).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch samples"})
+		return
+	}
+	
+	// Generate CSV content (simplified Excel export)
+	csvContent := "Sample Date,Pool Name,pH,Free Chlorine (ppm),Total Chlorine (ppm),Total Alkalinity (ppm),Calcium Hardness (ppm),Cyanuric Acid (ppm),Temperature (°F),Salinity (ppm),LSI,RSI,Notes\n"
+	
+	for _, sample := range samples {
+		poolName := ""
+		if sample.Pool != nil {
+			poolName = sample.Pool.Name
+		}
+		
+		// Format date
+		date := sample.SampleDateTime.Format("2006-01-02 15:04:05")
+		
+		// Get measurement values
+		ph := ""
+		fc := ""
+		tc := ""
+		ta := ""
+		ch := ""
+		cya := ""
+		temp := ""
+		salinity := ""
+		lsi := ""
+		rsi := ""
+		
+		if sample.Measurements != nil {
+			if sample.Measurements.PH != 0 {
+				ph = fmt.Sprintf("%.2f", sample.Measurements.PH)
+			}
+			if sample.Measurements.FC != 0 {
+				fc = fmt.Sprintf("%.2f", sample.Measurements.FC)
+			}
+			if sample.Measurements.TC != 0 {
+				tc = fmt.Sprintf("%.2f", sample.Measurements.TC)
+			}
+			if sample.Measurements.TA != 0 {
+				ta = fmt.Sprintf("%.2f", sample.Measurements.TA)
+			}
+			if sample.Measurements.CH != 0 {
+				ch = fmt.Sprintf("%.2f", sample.Measurements.CH)
+			}
+			if sample.Measurements.CYA != nil {
+				cya = fmt.Sprintf("%.2f", *sample.Measurements.CYA)
+			}
+			if sample.Measurements.Temperature != 0 {
+				temp = fmt.Sprintf("%.1f", sample.Measurements.Temperature)
+			}
+			if sample.Measurements.Salinity != nil {
+				salinity = fmt.Sprintf("%.2f", *sample.Measurements.Salinity)
+			}
+		}
+		
+		if sample.Indices != nil {
+			if sample.Indices.LSI != nil {
+				lsi = fmt.Sprintf("%.2f", *sample.Indices.LSI)
+			}
+			if sample.Indices.RSI != nil {
+				rsi = fmt.Sprintf("%.2f", *sample.Indices.RSI)
+			}
+		}
+		
+		// Create CSV row
+		csvContent += fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\"%s\"\n",
+			date, poolName, ph, fc, tc, ta, ch, cya, temp, salinity, lsi, rsi, sample.Notes)
+	}
+	
+	// Set headers for file download
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment; filename=waterlogger_export.csv")
+	c.String(http.StatusOK, csvContent)
 }
 
 func (h *Handlers) ExportMarkdown(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	// Get samples with related data
+	var samples []models.Sample
+	if err := h.db.Preload("Pool").Preload("Measurements").Preload("Indices").Find(&samples).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch samples"})
+		return
+	}
+	
+	// Generate Markdown content
+	mdContent := "# Waterlogger Export\n\n"
+	mdContent += fmt.Sprintf("Generated on: %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
+	
+	if len(samples) == 0 {
+		mdContent += "No samples found.\n"
+	} else {
+		mdContent += fmt.Sprintf("## Water Test Results (%d samples)\n\n", len(samples))
+		
+		for _, sample := range samples {
+			poolName := "Unknown Pool"
+			if sample.Pool != nil {
+				poolName = sample.Pool.Name
+			}
+			
+			mdContent += fmt.Sprintf("### %s - %s\n\n", poolName, sample.SampleDateTime.Format("2006-01-02 15:04:05"))
+			
+			if sample.Measurements != nil {
+				mdContent += "**Chemical Measurements:**\n"
+				if sample.Measurements.PH != 0 {
+					mdContent += fmt.Sprintf("- pH: %.2f\n", sample.Measurements.PH)
+				}
+				if sample.Measurements.FC != 0 {
+					mdContent += fmt.Sprintf("- Free Chlorine: %.2f ppm\n", sample.Measurements.FC)
+				}
+				if sample.Measurements.TC != 0 {
+					mdContent += fmt.Sprintf("- Total Chlorine: %.2f ppm\n", sample.Measurements.TC)
+				}
+				if sample.Measurements.TA != 0 {
+					mdContent += fmt.Sprintf("- Total Alkalinity: %.2f ppm\n", sample.Measurements.TA)
+				}
+				if sample.Measurements.CH != 0 {
+					mdContent += fmt.Sprintf("- Calcium Hardness: %.2f ppm\n", sample.Measurements.CH)
+				}
+				if sample.Measurements.CYA != nil {
+					mdContent += fmt.Sprintf("- Cyanuric Acid: %.2f ppm\n", *sample.Measurements.CYA)
+				}
+				if sample.Measurements.Temperature != 0 {
+					mdContent += fmt.Sprintf("- Temperature: %.1f°F\n", sample.Measurements.Temperature)
+				}
+				if sample.Measurements.Salinity != nil {
+					mdContent += fmt.Sprintf("- Salinity: %.2f ppm\n", *sample.Measurements.Salinity)
+				}
+				mdContent += "\n"
+			}
+			
+			if sample.Indices != nil {
+				mdContent += "**Water Balance Indices:**\n"
+				if sample.Indices.LSI != nil {
+					mdContent += fmt.Sprintf("- LSI (Langelier Saturation Index): %.2f\n", *sample.Indices.LSI)
+				}
+				if sample.Indices.RSI != nil {
+					mdContent += fmt.Sprintf("- RSI (Ryznar Stability Index): %.2f\n", *sample.Indices.RSI)
+				}
+				mdContent += "\n"
+			}
+			
+			if sample.Notes != "" {
+				mdContent += fmt.Sprintf("**Notes:** %s\n\n", sample.Notes)
+			}
+			
+			mdContent += "---\n\n"
+		}
+	}
+	
+	// Set headers for file download
+	c.Header("Content-Type", "text/markdown")
+	c.Header("Content-Disposition", "attachment; filename=waterlogger_export.md")
+	c.String(http.StatusOK, mdContent)
 }
 
 func (h *Handlers) GetSettings(c *gin.Context) {
@@ -405,4 +697,28 @@ func (h *Handlers) GetSettings(c *gin.Context) {
 
 func (h *Handlers) UpdateSettings(c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+}
+
+// Unit conversion endpoints
+func (h *Handlers) ConvertUnits(c *gin.Context) {
+	var req struct {
+		Value     float64 `json:"value" binding:"required"`
+		Parameter string  `json:"parameter" binding:"required"`
+		FromSystem string `json:"from_system" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var fromSystem chemistry.UnitSystem
+	if req.FromSystem == "metric" {
+		fromSystem = chemistry.Metric
+	} else {
+		fromSystem = chemistry.Imperial
+	}
+
+	converted := chemistry.ConvertMeasurement(req.Value, req.Parameter, fromSystem)
+	c.JSON(http.StatusOK, converted)
 }

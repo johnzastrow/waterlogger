@@ -23,6 +23,97 @@ func CelsiusToFahrenheit(celsius float64) float64 {
 	return celsius*9.0/5.0 + 32
 }
 
+// Unit conversion utilities
+type UnitSystem string
+
+const (
+	Imperial UnitSystem = "imperial"
+	Metric   UnitSystem = "metric"
+)
+
+type ConvertedValue struct {
+	Value      float64 `json:"value"`
+	Unit       string  `json:"unit"`
+	Converted  float64 `json:"converted"`
+	ConvertedUnit string `json:"converted_unit"`
+}
+
+// ConvertTemperature converts temperature between Fahrenheit and Celsius
+func ConvertTemperature(value float64, fromSystem UnitSystem) ConvertedValue {
+	if fromSystem == Imperial {
+		return ConvertedValue{
+			Value:         value,
+			Unit:          "°F",
+			Converted:     FahrenheitToCelsius(value),
+			ConvertedUnit: "°C",
+		}
+	} else {
+		return ConvertedValue{
+			Value:         value,
+			Unit:          "°C",
+			Converted:     CelsiusToFahrenheit(value),
+			ConvertedUnit: "°F",
+		}
+	}
+}
+
+// ConvertVolume converts volume between gallons and liters
+func ConvertVolume(value float64, fromSystem UnitSystem) ConvertedValue {
+	if fromSystem == Imperial {
+		return ConvertedValue{
+			Value:         value,
+			Unit:          "gal",
+			Converted:     value * 3.78541, // gallons to liters
+			ConvertedUnit: "L",
+		}
+	} else {
+		return ConvertedValue{
+			Value:         value,
+			Unit:          "L",
+			Converted:     value / 3.78541, // liters to gallons
+			ConvertedUnit: "gal",
+		}
+	}
+}
+
+// ConvertMeasurement converts a measurement value to both unit systems
+func ConvertMeasurement(value float64, parameter string, fromSystem UnitSystem) ConvertedValue {
+	switch parameter {
+	case "temperature":
+		return ConvertTemperature(value, fromSystem)
+	case "volume":
+		return ConvertVolume(value, fromSystem)
+	default:
+		// Most chemical measurements (ppm, pH) are universal
+		return ConvertedValue{
+			Value:         value,
+			Unit:          getParameterUnit(parameter),
+			Converted:     value,
+			ConvertedUnit: getParameterUnit(parameter),
+		}
+	}
+}
+
+// getParameterUnit returns the standard unit for a parameter
+func getParameterUnit(parameter string) string {
+	units := map[string]string{
+		"ph":          "",
+		"fc":          "ppm",
+		"tc":          "ppm",
+		"ta":          "ppm",
+		"ch":          "ppm",
+		"cya":         "ppm",
+		"salinity":    "ppm",
+		"tds":         "ppm",
+		"temperature": "°F",
+		"volume":      "gal",
+		"lsi":         "",
+		"rsi":         "",
+		"csi":         "",
+	}
+	return units[parameter]
+}
+
 // CalculatePhSCalcium calculates the saturation pH for calcium carbonate
 func CalculatePhSCalcium(tempC, tds, ca, hco3 float64) float64 {
 	tk := tempC + 273.15 // temperature: °C to K
@@ -76,18 +167,23 @@ func CalculateIndices(m *models.Measurements) (*models.Indices, error) {
 		return nil, fmt.Errorf("measurements cannot be nil")
 	}
 
-	// Convert temperature from Fahrenheit to Celsius
-	tempC := FahrenheitToCelsius(m.Temperature)
+	// We need pH and water temperature as minimum requirements
+	if m.PH == 0 {
+		return nil, fmt.Errorf("pH is required for index calculations")
+	}
+	
+	// Use water temperature, default to 75°F if not provided
+	tempF := 75.0
+	if m.Temperature != 0 {
+		tempF = m.Temperature
+	}
+	tempC := FahrenheitToCelsius(tempF)
 	
 	// Use defaults for missing parameters and track them
 	var missingParams []string
 	
 	tds := DefaultTDS
-	if m.TDS != nil {
-		tds = *m.TDS
-	} else {
-		missingParams = append(missingParams, "TDS")
-	}
+	missingParams = append(missingParams, "TDS")
 	
 	ca := DefaultCalciumHardness
 	if m.CH != 0 {

@@ -482,6 +482,10 @@ body {
     overflow-y: auto;
 }
 
+.large-modal {
+    max-width: 800px;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -561,5 +565,137 @@ body {
     
     .modal-content {
         padding: 1rem;
+    }
+}
+
+/* Samples Page */
+.samples-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.sample-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sample-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.sample-info h3 {
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.sample-date {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.sample-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sample-measurements,
+.sample-indices,
+.sample-notes {
+    margin-bottom: 1.5rem;
+}
+
+.sample-measurements h4,
+.sample-indices h4,
+.sample-notes h4 {
+    color: #374151;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.measurement-grid,
+.indices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.measurement-item,
+.index-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background-color: #f9fafb;
+    border-radius: 4px;
+}
+
+.measurement-label,
+.index-label {
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.measurement-value,
+.index-value {
+    color: #374151;
+}
+
+.sample-notes p {
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Form Sections */
+.form-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.form-section {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    background-color: #f9fafb;
+}
+
+.form-section h4 {
+    color: #374151;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+/* Responsive adjustments for samples */
+@media (max-width: 768px) {
+    .sample-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .sample-actions {
+        align-self: flex-end;
+    }
+    
+    .measurement-grid,
+    .indices-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
     }
 }

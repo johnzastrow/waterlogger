@@ -120,5 +120,99 @@ window.WaterloggerHelpers = {
             const errorMessage = WaterloggerDebug.handleError(error, `loading ${context}`);
             return { success: false, error: errorMessage };
         }
+    },
+    
+    // Unit conversion helper
+    async convertUnits(value, parameter, fromSystem) {
+        console.log(`[DEBUG] Converting ${value} ${parameter} from ${fromSystem}`);
+        
+        try {
+            const result = await WaterloggerDebug.fetch('/api/convert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    value: value,
+                    parameter: parameter,
+                    from_system: fromSystem
+                })
+            });
+            
+            if (result.ok) {
+                console.log(`[DEBUG] Unit conversion successful:`, result.data);
+                return { success: true, data: result.data };
+            } else {
+                const errorMessage = WaterloggerDebug.formatError(null, result.data);
+                console.error(`[DEBUG] Unit conversion failed:`, errorMessage);
+                return { success: false, error: errorMessage };
+            }
+        } catch (error) {
+            const errorMessage = WaterloggerDebug.handleError(error, 'unit conversion');
+            return { success: false, error: errorMessage };
+        }
+    }
+};
+
+// Unit conversion utilities
+window.WaterloggerUnits = {
+    // Format a measurement value with dual-unit display
+    formatMeasurement(value, parameter, userSystem = 'imperial') {
+        if (!value || value === 0) return '';
+        
+        const conversions = {
+            temperature: {
+                imperial: { unit: '°F', convert: (f) => ((f - 32) * 5/9), convertedUnit: '°C' },
+                metric: { unit: '°C', convert: (c) => (c * 9/5 + 32), convertedUnit: '°F' }
+            },
+            volume: {
+                imperial: { unit: 'gal', convert: (gal) => (gal * 3.78541), convertedUnit: 'L' },
+                metric: { unit: 'L', convert: (l) => (l / 3.78541), convertedUnit: 'gal' }
+            }
+        };
+        
+        if (conversions[parameter]) {
+            const config = conversions[parameter][userSystem];
+            const converted = config.convert(value);
+            return `${value} ${config.unit} (${converted.toFixed(1)} ${config.convertedUnit})`;
+        }
+        
+        // For parameters without conversion (pH, ppm values)
+        const units = {
+            ph: '',
+            fc: ' ppm',
+            tc: ' ppm',
+            ta: ' ppm',
+            ch: ' ppm',
+            cya: ' ppm',
+            salinity: ' ppm',
+            tds: ' ppm',
+            lsi: '',
+            rsi: '',
+            csi: ''
+        };
+        
+        return `${value}${units[parameter] || ''}`;
+    },
+    
+    // Get the appropriate unit label for a parameter
+    getUnitLabel(parameter, userSystem = 'imperial') {
+        const units = {
+            temperature: userSystem === 'imperial' ? '°F' : '°C',
+            volume: userSystem === 'imperial' ? 'gal' : 'L',
+            ph: '',
+            fc: 'ppm',
+            tc: 'ppm',
+            ta: 'ppm',
+            ch: 'ppm',
+            cya: 'ppm',
+            salinity: 'ppm',
+            tds: 'ppm',
+            lsi: '',
+            rsi: '',
+            csi: ''
+        };
+        
+        return units[parameter] || '';
     }
 };

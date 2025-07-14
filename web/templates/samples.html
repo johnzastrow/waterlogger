@@ -1,14 +1,388 @@
 {{template "base.html" .}}
 
 {{define "content"}}
-<div class="samples-container">
+<script src="/static/js/debug.js"></script>
+<div class="samples-container" x-data="samplesManager()">
     <div class="page-header">
         <h2>Water Samples</h2>
-        <button class="btn btn-primary">Add Sample</button>
+        <button @click="showAddModal = true" class="btn btn-primary">Add Sample</button>
     </div>
     
-    <div class="samples-grid">
-        <p>Sample management coming soon...</p>
+    <div class="samples-list">
+        <template x-for="sample in samples" :key="sample.id">
+            <div class="sample-card">
+                <div class="sample-header">
+                    <div class="sample-info">
+                        <h3 x-text="sample.pool?.name || 'Unknown Pool'"></h3>
+                        <span class="sample-date" x-text="formatDate(sample.sample_datetime)"></span>
+                    </div>
+                    <div class="sample-actions">
+                        <button @click="editSample(sample)" class="btn btn-sm btn-secondary">Edit</button>
+                        <button @click="deleteSample(sample.id)" class="btn btn-sm btn-danger">Delete</button>
+                    </div>
+                </div>
+                
+                <div class="sample-measurements" x-show="sample.measurements">
+                    <h4>Measurements</h4>
+                    <div class="measurement-grid">
+                        <div class="measurement-item" x-show="sample.measurements.ph">
+                            <span class="measurement-label">pH:</span>
+                            <span class="measurement-value" x-text="sample.measurements.ph"></span>
+                        </div>
+                        <div class="measurement-item" x-show="sample.measurements.fc">
+                            <span class="measurement-label">Free Chlorine:</span>
+                            <span class="measurement-value" x-text="sample.measurements.fc + ' ppm'"></span>
+                        </div>
+                        <div class="measurement-item" x-show="sample.measurements.tc">
+                            <span class="measurement-label">Total Chlorine:</span>
+                            <span class="measurement-value" x-text="sample.measurements.tc + ' ppm'"></span>
+                        </div>
+                        <div class="measurement-item" x-show="sample.measurements.ta">
+                            <span class="measurement-label">Total Alkalinity:</span>
+                            <span class="measurement-value" x-text="sample.measurements.ta + ' ppm'"></span>
+                        </div>
+                        <div class="measurement-item" x-show="sample.measurements.ch">
+                            <span class="measurement-label">Calcium Hardness:</span>
+                            <span class="measurement-value" x-text="sample.measurements.ch + ' ppm'"></span>
+                        </div>
+                        <div class="measurement-item" x-show="sample.measurements.cya">
+                            <span class="measurement-label">Cyanuric Acid:</span>
+                            <span class="measurement-value" x-text="sample.measurements.cya + ' ppm'"></span>
+                        </div>
+                        <div class="measurement-item" x-show="sample.measurements.temperature">
+                            <span class="measurement-label">Water Temperature:</span>
+                            <span class="measurement-value" x-text="WaterloggerUnits.formatMeasurement(sample.measurements.temperature, 'temperature', 'imperial')"></span>
+                        </div>
+                        <div class="measurement-item" x-show="sample.measurements.salinity">
+                            <span class="measurement-label">Salinity:</span>
+                            <span class="measurement-value" x-text="WaterloggerUnits.formatMeasurement(sample.measurements.salinity, 'salinity', 'imperial')"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sample-indices" x-show="sample.indices">
+                    <h4>Water Quality Indices</h4>
+                    <div class="indices-grid">
+                        <div class="index-item" x-show="sample.indices.lsi">
+                            <span class="index-label">LSI (Langelier Saturation Index):</span>
+                            <span class="index-value" x-text="sample.indices.lsi"></span>
+                        </div>
+                        <div class="index-item" x-show="sample.indices.rsi">
+                            <span class="index-label">RSI (Ryznar Stability Index):</span>
+                            <span class="index-value" x-text="sample.indices.rsi"></span>
+                        </div>
+                        <div class="index-item" x-show="sample.indices.csi">
+                            <span class="index-label">CSI (Calcium Saturation Index):</span>
+                            <span class="index-value" x-text="sample.indices.csi"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sample-notes" x-show="sample.notes">
+                    <h4>Notes</h4>
+                    <p x-text="sample.notes"></p>
+                </div>
+            </div>
+        </template>
+        
+        <div x-show="samples.length === 0" class="empty-state">
+            <p>No samples recorded yet.</p>
+            <button @click="showAddModal = true" class="btn btn-primary">Add Your First Sample</button>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Sample Modal -->
+    <div x-show="showAddModal || showEditModal" class="modal-overlay" @click="closeModal()">
+        <div class="modal-content large-modal" @click.stop>
+            <div class="modal-header">
+                <h3 x-text="showEditModal ? 'Edit Sample' : 'Add Sample'"></h3>
+                <button @click="closeModal()" class="close-btn">&times;</button>
+            </div>
+            
+            <form @submit.prevent="saveSample()">
+                <div class="form-sections">
+                    <div class="form-section">
+                        <h4>Sample Information</h4>
+                        
+                        <div class="form-group">
+                            <label for="pool_id">Pool <span class="required">*</span></label>
+                            <select id="pool_id" x-model="currentSample.pool_id" required>
+                                <option value="">Select pool...</option>
+                                <template x-for="pool in pools" :key="pool.id">
+                                    <option :value="pool.id" x-text="pool.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="sample_datetime">Sample Date & Time <span class="required">*</span></label>
+                            <input type="datetime-local" id="sample_datetime" x-model="currentSample.sample_datetime" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="kit_id">Test Kit Used</label>
+                            <select id="kit_id" x-model="currentSample.kit_id">
+                                <option value="">Select kit...</option>
+                                <template x-for="kit in kits" :key="kit.id">
+                                    <option :value="kit.id" x-text="kit.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Chemical Measurements</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ph">pH Level</label>
+                                <input type="number" id="ph" x-model="currentSample.measurements.ph" step="0.01" min="0" max="14">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="fc">Free Chlorine (ppm)</label>
+                                <input type="number" id="fc" x-model="currentSample.measurements.fc" step="0.01" min="0">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="tc">Total Chlorine (ppm)</label>
+                                <input type="number" id="tc" x-model="currentSample.measurements.tc" step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ta">Total Alkalinity (ppm)</label>
+                                <input type="number" id="ta" x-model="currentSample.measurements.ta" step="1" min="0">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="ch">Calcium Hardness (ppm)</label>
+                                <input type="number" id="ch" x-model="currentSample.measurements.ch" step="1" min="0">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="cya">Cyanuric Acid (ppm)</label>
+                                <input type="number" id="cya" x-model="currentSample.measurements.cya" step="1" min="0">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="temperature">Water Temperature (°F)</label>
+                                <input type="number" id="temperature" x-model="currentSample.measurements.temperature" step="0.1">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="salinity">Salinity (ppm)</label>
+                                <input type="number" id="salinity" x-model="currentSample.measurements.salinity" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Additional Information</h4>
+                        
+                        <div class="form-group">
+                            <label for="notes">Notes</label>
+                            <textarea id="notes" x-model="currentSample.notes" rows="3" placeholder="Any observations, conditions, or additional notes..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" @click="closeModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" :disabled="loading">
+                        <span x-show="!loading" x-text="showEditModal ? 'Update Sample' : 'Add Sample'"></span>
+                        <span x-show="loading">Saving...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+    function samplesManager() {
+        return {
+            samples: [],
+            pools: [],
+            kits: [],
+            showAddModal: false,
+            showEditModal: false,
+            loading: false,
+            currentSample: {
+                id: null,
+                pool_id: '',
+                sample_datetime: '',
+                kit_id: '',
+                notes: '',
+                measurements: {
+                    ph: '',
+                    fc: '',
+                    tc: '',
+                    ta: '',
+                    ch: '',
+                    cya: '',
+                    temperature: '',
+                    salinity: ''
+                }
+            },
+            
+            async init() {
+                await this.loadPools();
+                await this.loadKits();
+                await this.loadSamples();
+                this.setCurrentDateTime();
+            },
+            
+            async loadPools() {
+                const result = await WaterloggerHelpers.loadData('/api/pools', 'pools');
+                if (result.success) {
+                    this.pools = result.data || [];
+                }
+            },
+            
+            async loadKits() {
+                const result = await WaterloggerHelpers.loadData('/api/kits', 'kits');
+                if (result.success) {
+                    this.kits = result.data || [];
+                }
+            },
+            
+            async loadSamples() {
+                const result = await WaterloggerHelpers.loadData('/api/samples', 'samples');
+                if (result.success) {
+                    this.samples = result.data || [];
+                }
+            },
+            
+            setCurrentDateTime() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                this.currentSample.sample_datetime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            },
+            
+            editSample(sample) {
+                this.currentSample = {
+                    ...sample,
+                    measurements: sample.measurements || {
+                        ph: '',
+                        fc: '',
+                        tc: '',
+                        ta: '',
+                        ch: '',
+                        cya: '',
+                        temperature: '',
+                        salinity: ''
+                    }
+                };
+                
+                // Format datetime for input
+                if (this.currentSample.sample_datetime) {
+                    const date = new Date(this.currentSample.sample_datetime);
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    this.currentSample.sample_datetime = `${year}-${month}-${day}T${hours}:${minutes}`;
+                }
+                
+                this.showEditModal = true;
+            },
+            
+            async saveSample() {
+                this.loading = true;
+                
+                const isEdit = this.showEditModal;
+                const url = isEdit ? `/api/samples/${this.currentSample.id}` : '/api/samples';
+                const method = isEdit ? 'PUT' : 'POST';
+                
+                // Clean up measurements - remove empty values
+                const cleanedMeasurements = {};
+                Object.keys(this.currentSample.measurements).forEach(key => {
+                    const value = this.currentSample.measurements[key];
+                    if (value !== '' && value !== null && value !== undefined) {
+                        cleanedMeasurements[key] = parseFloat(value) || value;
+                    }
+                });
+                
+                const sampleData = {
+                    ...this.currentSample,
+                    measurements: cleanedMeasurements,
+                    pool_id: parseInt(this.currentSample.pool_id),
+                    kit_id: this.currentSample.kit_id ? parseInt(this.currentSample.kit_id) : null
+                };
+                
+                const result = await WaterloggerHelpers.submitForm(
+                    sampleData,
+                    url,
+                    method,
+                    isEdit ? 'Sample update' : 'Sample creation'
+                );
+                
+                if (result.success) {
+                    await this.loadSamples();
+                    this.closeModal();
+                } else {
+                    alert(result.error);
+                }
+                
+                this.loading = false;
+            },
+            
+            async deleteSample(sampleId) {
+                if (!confirm('Are you sure you want to delete this sample?')) {
+                    return;
+                }
+                
+                const result = await WaterloggerHelpers.submitForm(
+                    {},
+                    `/api/samples/${sampleId}`,
+                    'DELETE',
+                    'Sample deletion'
+                );
+                
+                if (result.success) {
+                    await this.loadSamples();
+                } else {
+                    alert(result.error);
+                }
+            },
+            
+            closeModal() {
+                this.showAddModal = false;
+                this.showEditModal = false;
+                this.currentSample = {
+                    id: null,
+                    pool_id: '',
+                    sample_datetime: '',
+                    kit_id: '',
+                    notes: '',
+                    measurements: {
+                        ph: '',
+                        fc: '',
+                        tc: '',
+                        ta: '',
+                        ch: '',
+                        cya: '',
+                        temperature: '',
+                        salinity: ''
+                    }
+                };
+                this.setCurrentDateTime();
+            },
+            
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            }
+        };
+    }
+</script>
 {{end}}

@@ -87,7 +87,7 @@ func (c *Config) Save(configPath string) error {
 func Default() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port: 2341,
+			Port: 2342,
 			Host: "localhost",
 		},
 		Database: DatabaseConfig{

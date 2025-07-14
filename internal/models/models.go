@@ -66,6 +66,7 @@ type Sample struct {
 	SampleDateTime time.Time `gorm:"not null" json:"sample_datetime"`
 	UserID         uint      `gorm:"not null" json:"user_id"`
 	KitID          uint      `gorm:"not null" json:"kit_id"`
+	Notes          string    `gorm:"type:text" json:"notes"`
 	
 	// Relationships
 	Pool         *Pool         `gorm:"foreignKey:PoolID" json:"pool,omitempty"`

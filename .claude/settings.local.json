@@ -19,7 +19,12 @@
       "Bash(sqlite3:*)",
       "Bash(export:*)",
       "Bash(ss:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(./waterlogger:*)",
+      "Bash(chmod:*)",
+      "Bash(./reset_password.sh:*)",
+      "Bash(python3:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

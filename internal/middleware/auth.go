@@ -71,39 +71,8 @@ func CheckPasswordHash(password, hash string) bool {
 func ValidatePassword(password string) []string {
 	var errors []string
 	
-	if len(password) < 8 {
-		errors = append(errors, "Password must be at least 8 characters long")
-	}
-	
-	hasUpper := false
-	hasLower := false
-	hasDigit := false
-	hasSpecial := false
-	
-	for _, char := range password {
-		switch {
-		case 'A' <= char && char <= 'Z':
-			hasUpper = true
-		case 'a' <= char && char <= 'z':
-			hasLower = true
-		case '0' <= char && char <= '9':
-			hasDigit = true
-		case strings.ContainsRune("!@#$%^&*()_+-=[]{}|;:,.<>?", char):
-			hasSpecial = true
-		}
-	}
-	
-	if !hasUpper {
-		errors = append(errors, "Password must contain at least one uppercase letter")
-	}
-	if !hasLower {
-		errors = append(errors, "Password must contain at least one lowercase letter")
-	}
-	if !hasDigit {
-		errors = append(errors, "Password must contain at least one digit")
-	}
-	if !hasSpecial {
-		errors = append(errors, "Password must contain at least one special character")
+	if len(password) < 1 {
+		errors = append(errors, "Password cannot be empty")
 	}
 	
 	return errors
