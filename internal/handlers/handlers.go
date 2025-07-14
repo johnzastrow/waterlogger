@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -188,6 +189,12 @@ func (h *Handlers) Dashboard(c *gin.Context) {
 func (h *Handlers) PoolsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "pools.html", gin.H{
 		"title": "Pools - Waterlogger",
+	})
+}
+
+func (h *Handlers) KitsPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "kits.html", gin.H{
+		"title": "Test Kits - Waterlogger",
 	})
 }
 
@@ -439,16 +446,120 @@ func (h *Handlers) GetKits(c *gin.Context) {
 	c.JSON(http.StatusOK, kits)
 }
 
+// getUserID extracts the user ID from the request context
+func getUserID(c *gin.Context) uint {
+	// For now, return a default user ID of 1 (admin user)
+	// In a real implementation, this would get the user ID from the session/token
+	return 1
+}
+
 func (h *Handlers) CreateKit(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	var kit models.Kit
+	if err := c.ShouldBindJSON(&kit); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format: " + err.Error()})
+		return
+	}
+
+	// Validate required fields
+	if kit.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Kit name is required"})
+		return
+	}
+
+	// Set audit context
+	ctx := context.WithValue(c.Request.Context(), "user_id", getUserID(c))
+	if err := h.db.WithContext(ctx).Create(&kit).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create kit"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, kit)
 }
 
 func (h *Handlers) UpdateKit(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	kitID := c.Param("id")
+	if kitID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Kit ID is required"})
+		return
+	}
+
+	// Check if kit exists
+	var existingKit models.Kit
+	if err := h.db.First(&existingKit, kitID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Kit not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch kit"})
+		}
+		return
+	}
+
+	// Bind updated data
+	var updates models.Kit
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format: " + err.Error()})
+		return
+	}
+
+	// Validate required fields
+	if updates.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Kit name is required"})
+		return
+	}
+
+	// Set audit context and update
+	ctx := context.WithValue(c.Request.Context(), "user_id", getUserID(c))
+	if err := h.db.WithContext(ctx).Model(&existingKit).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update kit"})
+		return
+	}
+
+	// Return updated kit
+	if err := h.db.First(&existingKit, kitID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated kit"})
+		return
+	}
+
+	c.JSON(http.StatusOK, existingKit)
 }
 
 func (h *Handlers) DeleteKit(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	kitID := c.Param("id")
+	if kitID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Kit ID is required"})
+		return
+	}
+
+	// Check if kit exists
+	var kit models.Kit
+	if err := h.db.First(&kit, kitID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Kit not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch kit"})
+		}
+		return
+	}
+
+	// Check if kit is being used by any samples
+	var sampleCount int64
+	if err := h.db.Model(&models.Sample{}).Where("kit_id = ?", kitID).Count(&sampleCount).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check kit usage"})
+		return
+	}
+
+	if sampleCount > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete kit that is being used by samples"})
+		return
+	}
+
+	// Delete the kit
+	if err := h.db.Delete(&kit).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete kit"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Kit deleted successfully"})
 }
 
 func (h *Handlers) GetChartData(c *gin.Context) {
@@ -692,11 +803,104 @@ func (h *Handlers) ExportMarkdown(c *gin.Context) {
 }
 
 func (h *Handlers) GetSettings(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Get user preferences
+	var preferences models.UserPreferences
+	if err := h.db.Where("user_id = ?", userID).First(&preferences).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Create default preferences
+			preferences = models.UserPreferences{
+				UserID:     userID.(uint),
+				UnitSystem: "imperial",
+			}
+			preferences.CreatedBy = userID.(uint)
+			preferences.UpdatedBy = userID.(uint)
+			
+			if err := h.db.Create(&preferences).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create default preferences"})
+				return
+			}
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load preferences"})
+			return
+		}
+	}
+
+	// Get system information
+	systemInfo := gin.H{
+		"database_type": h.cfg.Database.Type,
+		"server_port":   h.cfg.Server.Port,
+		"app_version":   h.cfg.App.Version,
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"preferences": preferences,
+		"system":      systemInfo,
+	})
 }
 
 func (h *Handlers) UpdateSettings(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req struct {
+		UnitSystem string `json:"unit_system" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format", "details": err.Error()})
+		return
+	}
+
+	// Validate unit system
+	if req.UnitSystem != "imperial" && req.UnitSystem != "metric" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid unit system. Must be 'imperial' or 'metric'"})
+		return
+	}
+
+	// Update or create user preferences
+	var preferences models.UserPreferences
+	result := h.db.Where("user_id = ?", userID).First(&preferences)
+	
+	if result.Error == gorm.ErrRecordNotFound {
+		// Create new preferences
+		preferences = models.UserPreferences{
+			UserID:     userID.(uint),
+			UnitSystem: req.UnitSystem,
+		}
+		preferences.CreatedBy = userID.(uint)
+		preferences.UpdatedBy = userID.(uint)
+		
+		if err := h.db.Create(&preferences).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create preferences"})
+			return
+		}
+	} else if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load preferences"})
+		return
+	} else {
+		// Update existing preferences
+		preferences.UnitSystem = req.UnitSystem
+		preferences.UpdatedBy = userID.(uint)
+		
+		if err := h.db.Save(&preferences).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update preferences"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":     "Settings updated successfully",
+		"preferences": preferences,
+	})
 }
 
 // Unit conversion endpoints

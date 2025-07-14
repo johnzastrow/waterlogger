@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h1>Waterlogger</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-item">Dashboard</a>
+                <a href="/pools" class="navbar-item">Pools</a>
+                <a href="/kits" class="navbar-item">Test Kits</a>
+                <a href="/samples" class="navbar-item">Samples</a>
+                <a href="/charts" class="navbar-item">Charts</a>
+                <a href="/export" class="navbar-item">Export</a>
+                <a href="/settings" class="navbar-item">Settings</a>
+                <a href="#" class="navbar-item" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <script src="/static/js/debug.js"></script>
+        <div class="kits-container" x-data="kitsManager()">
+    <div class="page-header">
+        <h2>🧪 Test Kits Management</h2>
+        <button @click="showAddModal = true" class="btn btn-primary">Add Test Kit</button>
+    </div>
+
+    <div class="kits-grid">
+        <template x-for="kit in kits" :key="kit.id">
+            <div class="kit-card">
+                <div class="kit-header">
+                    <h3 x-text="kit.name"></h3>
+                    <div class="kit-actions">
+                        <button @click="editKit(kit)" class="btn btn-sm btn-secondary">Edit</button>
+                        <button @click="deleteKit(kit.id)" class="btn btn-sm btn-danger">Delete</button>
+                    </div>
+                </div>
+                <div class="kit-details">
+                    <div class="detail-item" x-show="kit.description">
+                        <span class="detail-label">Description:</span>
+                        <span class="detail-value" x-text="kit.description"></span>
+                    </div>
+                    <div class="detail-item" x-show="kit.purchased_date">
+                        <span class="detail-label">Purchased:</span>
+                        <span class="detail-value" x-text="formatDate(kit.purchased_date)"></span>
+                    </div>
+                    <div class="detail-item" x-show="kit.replenished_date">
+                        <span class="detail-label">Last Replenished:</span>
+                        <span class="detail-value" x-text="formatDate(kit.replenished_date)"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Created:</span>
+                        <span class="detail-value" x-text="formatDate(kit.created_at)"></span>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <div x-show="kits.length === 0" class="empty-state">
+            <p>No test kits registered yet.</p>
+            <button @click="showAddModal = true" class="btn btn-primary">Add Your First Test Kit</button>
+        </div>
+    </div>
+
+    <!-- Add/Edit Kit Modal -->
+    <div x-show="showAddModal || showEditModal" class="modal-overlay" @click="closeModal()">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3 x-text="showEditModal ? 'Edit Test Kit' : 'Add Test Kit'"></h3>
+                <button @click="closeModal()" class="close-btn">&times;</button>
+            </div>
+            
+            <form @submit.prevent="saveKit()">
+                <div class="form-group">
+                    <label for="kit_name">Kit Name <span class="required">*</span></label>
+                    <input type="text" id="kit_name" x-model="currentKit.name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="kit_description">Description</label>
+                    <textarea id="kit_description" x-model="currentKit.description" rows="3" placeholder="Brief description of the test kit..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="purchased_date">Purchase Date</label>
+                    <input type="date" id="purchased_date" x-model="currentKit.purchased_date">
+                </div>
+
+                <div class="form-group">
+                    <label for="replenished_date">Last Replenished Date</label>
+                    <input type="date" id="replenished_date" x-model="currentKit.replenished_date">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" @click="closeModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" :disabled="loading">
+                        <span x-show="!loading" x-text="showEditModal ? 'Update Kit' : 'Add Kit'"></span>
+                        <span x-show="loading">Saving...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function kitsManager() {
+        return {
+            kits: [],
+            showAddModal: false,
+            showEditModal: false,
+            loading: false,
+            currentKit: {
+                id: null,
+                name: '',
+                description: '',
+                purchased_date: '',
+                replenished_date: ''
+            },
+            
+            async init() {
+                await this.loadKits();
+            },
+            
+            async loadKits() {
+                const result = await WaterloggerHelpers.loadData('/api/kits', 'test kits');
+                if (result.success) {
+                    this.kits = result.data;
+                }
+            },
+            
+            editKit(kit) {
+                this.currentKit = { 
+                    ...kit,
+                    purchased_date: kit.purchased_date ? this.formatDateForInput(kit.purchased_date) : '',
+                    replenished_date: kit.replenished_date ? this.formatDateForInput(kit.replenished_date) : ''
+                };
+                this.showEditModal = true;
+            },
+            
+            async saveKit() {
+                this.loading = true;
+                
+                const isEdit = this.showEditModal;
+                const url = isEdit ? `/api/kits/${this.currentKit.id}` : '/api/kits';
+                const method = isEdit ? 'PUT' : 'POST';
+                
+                // Prepare kit data with proper date formatting
+                const kitData = {
+                    ...this.currentKit,
+                    purchased_date: this.currentKit.purchased_date || null,
+                    replenished_date: this.currentKit.replenished_date || null
+                };
+                
+                // Clean up empty strings
+                if (kitData.description === '') kitData.description = null;
+                if (kitData.purchased_date === '') kitData.purchased_date = null;
+                if (kitData.replenished_date === '') kitData.replenished_date = null;
+                
+                const result = await WaterloggerHelpers.submitForm(
+                    kitData, 
+                    url, 
+                    method, 
+                    isEdit ? 'Test kit update' : 'Test kit creation'
+                );
+                
+                if (result.success) {
+                    await this.loadKits();
+                    this.closeModal();
+                } else {
+                    alert(result.error);
+                }
+                
+                this.loading = false;
+            },
+            
+            async deleteKit(kitId) {
+                if (!confirm('Are you sure you want to delete this test kit?')) {
+                    return;
+                }
+                
+                const result = await WaterloggerHelpers.submitForm(
+                    {}, 
+                    `/api/kits/${kitId}`, 
+                    'DELETE', 
+                    'Test kit deletion'
+                );
+                
+                if (result.success) {
+                    await this.loadKits();
+                } else {
+                    alert(result.error);
+                }
+            },
+            
+            closeModal() {
+                this.showAddModal = false;
+                this.showEditModal = false;
+                this.currentKit = {
+                    id: null,
+                    name: '',
+                    description: '',
+                    purchased_date: '',
+                    replenished_date: ''
+                };
+            },
+            
+            formatDate(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                return date.toLocaleDateString();
+            },
+            
+            formatDateForInput(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                return date.toISOString().split('T')[0];
+            }
+        };
+    }
+</script>
+    </main>
+
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

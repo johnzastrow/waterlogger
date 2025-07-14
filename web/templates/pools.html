@@ -1,10 +1,36 @@
-{{template "base.html" .}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h1>Waterlogger</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-item">Dashboard</a>
+                <a href="/pools" class="navbar-item">Pools</a>
+                <a href="/kits" class="navbar-item">Test Kits</a>
+                <a href="/samples" class="navbar-item">Samples</a>
+                <a href="/charts" class="navbar-item">Charts</a>
+                <a href="/export" class="navbar-item">Export</a>
+                <a href="/settings" class="navbar-item">Settings</a>
+                <a href="#" class="navbar-item" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
 
-{{define "content"}}
-<script src="/static/js/debug.js"></script>
-<div class="pools-container" x-data="poolsManager()">
+    <main class="main-content">
+        <script src="/static/js/debug.js"></script>
+        <div class="pools-container" x-data="poolsManager()">
     <div class="page-header">
-        <h2>Pools Management</h2>
+        <h2>🏊 Pools Management</h2>
         <button @click="showAddModal = true" class="btn btn-primary">Add Pool</button>
     </div>
 
@@ -66,7 +92,7 @@
 
                 <div class="form-group">
                     <label for="volume_gallons">Volume (gallons)</label>
-                    <input type="number" id="volume_gallons" x-model="currentPool.volume_gallons" step="0.01">
+                    <input type="number" id="volume_gallons" x-model.number="currentPool.volume_gallons" step="0.01">
                 </div>
 
                 <div class="form-group">
@@ -124,8 +150,14 @@
                 const url = isEdit ? `/api/pools/${this.currentPool.id}` : '/api/pools';
                 const method = isEdit ? 'PUT' : 'POST';
                 
+                // Ensure numeric fields are properly typed
+                const poolData = {
+                    ...this.currentPool,
+                    volume_gallons: this.currentPool.volume_gallons ? parseFloat(this.currentPool.volume_gallons) : null
+                };
+                
                 const result = await WaterloggerHelpers.submitForm(
-                    this.currentPool, 
+                    poolData, 
                     url, 
                     method, 
                     isEdit ? 'Pool update' : 'Pool creation'
@@ -174,4 +206,25 @@
         };
     }
 </script>
-{{end}}
+    </main>
+
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

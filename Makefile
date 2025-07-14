@@ -178,7 +178,7 @@ docker-build:
 # Docker run (if Dockerfile exists)
 .PHONY: docker-run
 docker-run:
-	docker run -p 2341:2341 $(APP_NAME):$(VERSION)
+	docker run -p 2342:2342 $(APP_NAME):$(VERSION)
 
 # Help target
 .PHONY: help

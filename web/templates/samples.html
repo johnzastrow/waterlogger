@@ -1,10 +1,36 @@
-{{template "base.html" .}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h1>Waterlogger</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-item">Dashboard</a>
+                <a href="/pools" class="navbar-item">Pools</a>
+                <a href="/kits" class="navbar-item">Test Kits</a>
+                <a href="/samples" class="navbar-item">Samples</a>
+                <a href="/charts" class="navbar-item">Charts</a>
+                <a href="/export" class="navbar-item">Export</a>
+                <a href="/settings" class="navbar-item">Settings</a>
+                <a href="#" class="navbar-item" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
 
-{{define "content"}}
-<script src="/static/js/debug.js"></script>
+    <main class="main-content">
+        <script src="/static/js/debug.js"></script>
 <div class="samples-container" x-data="samplesManager()">
     <div class="page-header">
-        <h2>Water Samples</h2>
+        <h2>🧪 Water Samples</h2>
         <button @click="showAddModal = true" class="btn btn-primary">Add Sample</button>
     </div>
     
@@ -15,6 +41,7 @@
                     <div class="sample-info">
                         <h3 x-text="sample.pool?.name || 'Unknown Pool'"></h3>
                         <span class="sample-date" x-text="formatDate(sample.sample_datetime)"></span>
+                        <span class="sample-kit" x-show="sample.kit" x-text="'Test Kit: ' + sample.kit.name"></span>
                     </div>
                     <div class="sample-actions">
                         <button @click="editSample(sample)" class="btn btn-sm btn-secondary">Edit</button>
@@ -385,4 +412,25 @@
         };
     }
 </script>
-{{end}}
+    </main>
+
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,13 +1,326 @@
-{{template "base.html" .}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h1>Waterlogger</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-item">Dashboard</a>
+                <a href="/pools" class="navbar-item">Pools</a>
+                <a href="/kits" class="navbar-item">Test Kits</a>
+                <a href="/samples" class="navbar-item">Samples</a>
+                <a href="/charts" class="navbar-item">Charts</a>
+                <a href="/export" class="navbar-item">Export</a>
+                <a href="/settings" class="navbar-item">Settings</a>
+                <a href="#" class="navbar-item" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
 
-{{define "content"}}
-<div class="charts-container">
+    <main class="main-content">
+        <script src="/static/js/debug.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="charts-container" x-data="chartsManager()">
     <div class="page-header">
-        <h2>Charts</h2>
+        <h2>📈 Charts</h2>
+        <p>Visualize your water chemistry trends over time</p>
+    </div>
+    
+    <div class="charts-controls">
+        <div class="form-group">
+            <label for="pool_filter">Pool:</label>
+            <select id="pool_filter" x-model="selectedPool" @change="loadChartData()">
+                <option value="">All Pools</option>
+                <template x-for="pool in pools" :key="pool.id">
+                    <option :value="pool.id" x-text="pool.name"></option>
+                </template>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="date_range">Date Range:</label>
+            <select id="date_range" x-model="dateRange" @change="loadChartData()">
+                <option value="7">Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+                <option value="365">Last Year</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <button @click="refreshCharts()" class="btn btn-secondary">
+                🔄 Refresh
+            </button>
+        </div>
     </div>
     
     <div class="charts-grid">
-        <p>Charts coming soon...</p>
+        <div class="chart-card">
+            <h3>pH Levels</h3>
+            <div class="chart-container">
+                <canvas id="phChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <h3>Chlorine Levels</h3>
+            <div class="chart-container">
+                <canvas id="chlorineChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <h3>Temperature</h3>
+            <div class="chart-container">
+                <canvas id="temperatureChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <h3>Water Balance Indices</h3>
+            <div class="chart-container">
+                <canvas id="indicesChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div x-show="loading" class="loading-message">
+        Loading chart data...
+    </div>
+    
+    <div x-show="!loading && chartData.length === 0" class="empty-state">
+        <p>No data available for the selected criteria.</p>
+        <p><a href="/samples">Add some water samples</a> to see charts.</p>
     </div>
 </div>
-{{end}}
+
+<script>
+    function chartsManager() {
+        return {
+            pools: [],
+            selectedPool: '',
+            dateRange: '30',
+            chartData: [],
+            loading: false,
+            charts: {},
+            
+            async init() {
+                await this.loadPools();
+                await this.loadChartData();
+                this.initializeCharts();
+            },
+            
+            async loadPools() {
+                const result = await WaterloggerHelpers.loadData('/api/pools', 'pools');
+                if (result.success) {
+                    this.pools = result.data;
+                }
+            },
+            
+            async loadChartData() {
+                this.loading = true;
+                
+                let url = `/api/charts/data?days=${this.dateRange}`;
+                if (this.selectedPool) {
+                    url += `&pool_id=${this.selectedPool}`;
+                }
+                
+                const result = await WaterloggerHelpers.loadData(url, 'chart data');
+                if (result.success) {
+                    this.chartData = result.data || [];
+                    this.updateCharts();
+                }
+                
+                this.loading = false;
+            },
+            
+            initializeCharts() {
+                // pH Chart
+                const phCtx = document.getElementById('phChart').getContext('2d');
+                this.charts.ph = new Chart(phCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'pH',
+                            data: [],
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                min: 6.0,
+                                max: 8.5,
+                                title: {
+                                    display: true,
+                                    text: 'pH Level'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Chlorine Chart
+                const chlorineCtx = document.getElementById('chlorineChart').getContext('2d');
+                this.charts.chlorine = new Chart(chlorineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Free Chlorine',
+                            data: [],
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1
+                        }, {
+                            label: 'Total Chlorine',
+                            data: [],
+                            borderColor: 'rgb(255, 159, 64)',
+                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                min: 0,
+                                title: {
+                                    display: true,
+                                    text: 'Chlorine (ppm)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Temperature Chart
+                const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+                this.charts.temperature = new Chart(tempCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Temperature',
+                            data: [],
+                            borderColor: 'rgb(153, 102, 255)',
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Temperature (°F)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Indices Chart
+                const indicesCtx = document.getElementById('indicesChart').getContext('2d');
+                this.charts.indices = new Chart(indicesCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'LSI',
+                            data: [],
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            tension: 0.1
+                        }, {
+                            label: 'RSI',
+                            data: [],
+                            borderColor: 'rgb(255, 206, 86)',
+                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Index Value'
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+            
+            updateCharts() {
+                if (!this.chartData.length) return;
+                
+                const labels = this.chartData.map(item => new Date(item.sample_datetime).toLocaleDateString());
+                
+                // Update pH Chart
+                this.charts.ph.data.labels = labels;
+                this.charts.ph.data.datasets[0].data = this.chartData.map(item => item.measurements?.ph || 0);
+                this.charts.ph.update();
+                
+                // Update Chlorine Chart
+                this.charts.chlorine.data.labels = labels;
+                this.charts.chlorine.data.datasets[0].data = this.chartData.map(item => item.measurements?.fc || 0);
+                this.charts.chlorine.data.datasets[1].data = this.chartData.map(item => item.measurements?.tc || 0);
+                this.charts.chlorine.update();
+                
+                // Update Temperature Chart
+                this.charts.temperature.data.labels = labels;
+                this.charts.temperature.data.datasets[0].data = this.chartData.map(item => item.measurements?.temperature || 0);
+                this.charts.temperature.update();
+                
+                // Update Indices Chart
+                this.charts.indices.data.labels = labels;
+                this.charts.indices.data.datasets[0].data = this.chartData.map(item => item.indices?.lsi || 0);
+                this.charts.indices.data.datasets[1].data = this.chartData.map(item => item.indices?.rsi || 0);
+                this.charts.indices.update();
+            },
+            
+            async refreshCharts() {
+                await this.loadChartData();
+            }
+        };
+    }
+</script>
+    </main>
+
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

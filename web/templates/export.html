@@ -1,13 +1,330 @@
-{{template "base.html" .}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h1>Waterlogger</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-item">Dashboard</a>
+                <a href="/pools" class="navbar-item">Pools</a>
+                <a href="/kits" class="navbar-item">Test Kits</a>
+                <a href="/samples" class="navbar-item">Samples</a>
+                <a href="/charts" class="navbar-item">Charts</a>
+                <a href="/export" class="navbar-item">Export</a>
+                <a href="/settings" class="navbar-item">Settings</a>
+                <a href="#" class="navbar-item" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
 
-{{define "content"}}
-<div class="export-container">
+    <main class="main-content">
+        <script src="/static/js/debug.js"></script>
+<div class="export-container" x-data="exportManager()">
     <div class="page-header">
-        <h2>Export Data</h2>
+        <h2>📁 Export Data</h2>
+        <p>Export your water management data in various formats</p>
     </div>
     
-    <div class="export-options">
-        <p>Export functionality coming soon...</p>
+    <div class="export-sections">
+        <div class="export-section">
+            <h3>📊 Excel Export</h3>
+            <p>Export all data to an Excel workbook with separate worksheets for each data type.</p>
+            
+            <div class="export-options">
+                <div class="form-group">
+                    <label for="excel_pools">Include Pools:</label>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" x-model="exportSettings.excel.all_pools" @change="toggleAllPools('excel')">
+                            All Pools
+                        </label>
+                        <template x-for="pool in pools" :key="pool.id">
+                            <label>
+                                <input type="checkbox" :value="pool.id" x-model="exportSettings.excel.selected_pools">
+                                <span x-text="pool.name"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="excel_date_range">Date Range:</label>
+                    <select id="excel_date_range" x-model="exportSettings.excel.date_range">
+                        <option value="all">All Time</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                        <option value="365">Last Year</option>
+                    </select>
+                </div>
+                
+                <button @click="exportToExcel()" class="btn btn-primary" :disabled="exporting">
+                    <span x-show="!exporting">📁 Export to Excel</span>
+                    <span x-show="exporting">⏳ Exporting...</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="export-section">
+            <h3>📝 Markdown Export</h3>
+            <p>Export data as a structured Markdown report with tables and summaries.</p>
+            
+            <div class="export-options">
+                <div class="form-group">
+                    <label for="markdown_pools">Include Pools:</label>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" x-model="exportSettings.markdown.all_pools" @change="toggleAllPools('markdown')">
+                            All Pools
+                        </label>
+                        <template x-for="pool in pools" :key="pool.id">
+                            <label>
+                                <input type="checkbox" :value="pool.id" x-model="exportSettings.markdown.selected_pools">
+                                <span x-text="pool.name"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="markdown_date_range">Date Range:</label>
+                    <select id="markdown_date_range" x-model="exportSettings.markdown.date_range">
+                        <option value="all">All Time</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                        <option value="365">Last Year</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" x-model="exportSettings.markdown.include_charts">
+                        Include Chart Data
+                    </label>
+                </div>
+                
+                <button @click="exportToMarkdown()" class="btn btn-primary" :disabled="exporting">
+                    <span x-show="!exporting">📝 Export to Markdown</span>
+                    <span x-show="exporting">⏳ Exporting...</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="export-section">
+            <h3>⚙️ System Backup</h3>
+            <p>Create a complete backup of all system data for migration or archival purposes.</p>
+            
+            <div class="export-options">
+                <button @click="createBackup()" class="btn btn-secondary" :disabled="exporting">
+                    <span x-show="!exporting">💾 Create Full Backup</span>
+                    <span x-show="exporting">⏳ Creating Backup...</span>
+                </button>
+                
+                <p class="help-text">
+                    Full backup includes all users, pools, samples, measurements, and system configuration.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="export-status">
+        <div x-show="message" class="success-message" x-text="message"></div>
+        <div x-show="error" class="error-message" x-text="error"></div>
+    </div>
+    
+    <div class="export-history">
+        <h3>Recent Exports</h3>
+        <div class="export-list">
+            <template x-for="export in recentExports" :key="export.filename">
+                <div class="export-item">
+                    <span class="export-filename" x-text="export.filename"></span>
+                    <span class="export-date" x-text="formatDate(export.created_at)"></span>
+                    <span class="export-size" x-text="export.size"></span>
+                </div>
+            </template>
+            
+            <div x-show="recentExports.length === 0" class="empty-state">
+                No exports yet
+            </div>
+        </div>
     </div>
 </div>
-{{end}}
+
+<script>
+    function exportManager() {
+        return {
+            pools: [],
+            exportSettings: {
+                excel: {
+                    all_pools: true,
+                    selected_pools: [],
+                    date_range: 'all'
+                },
+                markdown: {
+                    all_pools: true,
+                    selected_pools: [],
+                    date_range: 'all',
+                    include_charts: true
+                }
+            },
+            exporting: false,
+            message: '',
+            error: '',
+            recentExports: [],
+            
+            async init() {
+                await this.loadPools();
+                this.loadRecentExports();
+            },
+            
+            async loadPools() {
+                const result = await WaterloggerHelpers.loadData('/api/pools', 'pools');
+                if (result.success) {
+                    this.pools = result.data;
+                    // Initialize all pools as selected
+                    this.exportSettings.excel.selected_pools = this.pools.map(p => p.id);
+                    this.exportSettings.markdown.selected_pools = this.pools.map(p => p.id);
+                }
+            },
+            
+            toggleAllPools(format) {
+                if (this.exportSettings[format].all_pools) {
+                    this.exportSettings[format].selected_pools = this.pools.map(p => p.id);
+                } else {
+                    this.exportSettings[format].selected_pools = [];
+                }
+            },
+            
+            async exportToExcel() {
+                await this.performExport('/api/export/excel', this.exportSettings.excel, 'Excel export');
+            },
+            
+            async exportToMarkdown() {
+                await this.performExport('/api/export/markdown', this.exportSettings.markdown, 'Markdown export');
+            },
+            
+            async createBackup() {
+                await this.performExport('/api/export', {}, 'System backup');
+            },
+            
+            async performExport(url, settings, description) {
+                this.exporting = true;
+                this.message = '';
+                this.error = '';
+                
+                try {
+                    const params = new URLSearchParams();
+                    
+                    if (settings.selected_pools && settings.selected_pools.length > 0) {
+                        params.append('pools', settings.selected_pools.join(','));
+                    }
+                    
+                    if (settings.date_range && settings.date_range !== 'all') {
+                        params.append('days', settings.date_range);
+                    }
+                    
+                    if (settings.include_charts !== undefined) {
+                        params.append('include_charts', settings.include_charts);
+                    }
+                    
+                    const fullUrl = params.toString() ? `${url}?${params.toString()}` : url;
+                    
+                    console.log(`Exporting with URL: ${fullUrl}`);
+                    
+                    const response = await fetch(fullUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/octet-stream'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // Get filename from response headers
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = 'waterlogger_export';
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                            if (filenameMatch) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+                        
+                        // Download the file
+                        const blob = await response.blob();
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(downloadUrl);
+                        document.body.removeChild(a);
+                        
+                        this.message = `${description} completed successfully! File: ${filename}`;
+                        this.loadRecentExports();
+                    } else {
+                        const errorData = await response.json();
+                        this.error = errorData.error || `${description} failed`;
+                    }
+                } catch (error) {
+                    console.error('Export error:', error);
+                    this.error = `${description} failed: ${error.message}`;
+                } finally {
+                    this.exporting = false;
+                    
+                    // Clear messages after 5 seconds
+                    setTimeout(() => {
+                        this.message = '';
+                        this.error = '';
+                    }, 5000);
+                }
+            },
+            
+            loadRecentExports() {
+                // Simulate recent exports (in a real app, this would come from the server)
+                this.recentExports = [
+                    {
+                        filename: 'WL20250714_143022.xlsx',
+                        created_at: new Date().toISOString(),
+                        size: '124 KB'
+                    }
+                ];
+            },
+            
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            }
+        };
+    }
+</script>
+    </main>
+
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

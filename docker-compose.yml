@@ -4,7 +4,7 @@ services:
   waterlogger:
     build: .
     ports:
-      - "2341:2341"
+      - "2342:2342"
     environment:
       - GIN_MODE=release
     volumes:
@@ -14,7 +14,7 @@ services:
       - db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2341/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2342/"]
       interval: 30s
       timeout: 10s
       retries: 3

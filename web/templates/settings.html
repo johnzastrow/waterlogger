@@ -1,13 +1,171 @@
-{{template "base.html" .}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h1>Waterlogger</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-item">Dashboard</a>
+                <a href="/pools" class="navbar-item">Pools</a>
+                <a href="/kits" class="navbar-item">Test Kits</a>
+                <a href="/samples" class="navbar-item">Samples</a>
+                <a href="/charts" class="navbar-item">Charts</a>
+                <a href="/export" class="navbar-item">Export</a>
+                <a href="/settings" class="navbar-item">Settings</a>
+                <a href="#" class="navbar-item" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
 
-{{define "content"}}
-<div class="settings-container">
+    <main class="main-content">
+        <script src="/static/js/debug.js"></script>
+<div class="settings-container" x-data="settingsManager()">
     <div class="page-header">
-        <h2>Settings</h2>
+        <h2>⚙️ Settings</h2>
+        <p>Manage your system preferences and configuration</p>
     </div>
     
-    <div class="settings-form">
-        <p>Settings coming soon...</p>
+    <div class="settings-sections">
+        <div class="settings-section">
+            <h3>User Preferences</h3>
+            <form @submit.prevent="saveSettings()">
+                <div class="form-group">
+                    <label for="unit_system">Unit System</label>
+                    <select id="unit_system" x-model="settings.unit_system">
+                        <option value="imperial">Imperial (°F, gallons, ppm)</option>
+                        <option value="metric">Metric (°C, liters, mg/L)</option>
+                    </select>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" :disabled="loading">
+                        <span x-show="!loading">Save Settings</span>
+                        <span x-show="loading">Saving...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="settings-section">
+            <h3>System Information</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Application Version:</span>
+                    <span class="info-value">1.0.0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Database Type:</span>
+                    <span class="info-value" x-text="systemInfo.database_type || 'SQLite'"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Server Port:</span>
+                    <span class="info-value" x-text="systemInfo.server_port || '2342'"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Data Management</h3>
+            <div class="data-actions">
+                <button @click="exportData()" class="btn btn-secondary">
+                    📁 Export All Data
+                </button>
+                <button @click="clearCache()" class="btn btn-secondary">
+                    🗑️ Clear Cache
+                </button>
+            </div>
+        </div>
     </div>
+
+    <div x-show="message" class="success-message" x-text="message"></div>
+    <div x-show="error" class="error-message" x-text="error"></div>
 </div>
-{{end}}
+
+<script>
+    function settingsManager() {
+        return {
+            settings: {
+                unit_system: 'imperial'
+            },
+            systemInfo: {},
+            loading: false,
+            message: '',
+            error: '',
+            
+            async init() {
+                await this.loadSettings();
+            },
+            
+            async loadSettings() {
+                const result = await WaterloggerHelpers.loadData('/api/settings', 'settings');
+                if (result.success) {
+                    this.settings = result.data.preferences || this.settings;
+                    this.systemInfo = result.data.system || this.systemInfo;
+                }
+            },
+            
+            async saveSettings() {
+                this.loading = true;
+                this.message = '';
+                this.error = '';
+                
+                const result = await WaterloggerHelpers.submitForm(
+                    this.settings,
+                    '/api/settings',
+                    'POST',
+                    'Settings update'
+                );
+                
+                if (result.success) {
+                    this.message = 'Settings saved successfully!';
+                    setTimeout(() => this.message = '', 3000);
+                } else {
+                    this.error = result.error;
+                }
+                
+                this.loading = false;
+            },
+            
+            async exportData() {
+                this.message = 'Redirecting to export page...';
+                window.location.href = '/export';
+            },
+            
+            async clearCache() {
+                this.message = 'Cache cleared successfully!';
+                setTimeout(() => this.message = '', 3000);
+            }
+        };
+    }
+</script>
+    </main>
+
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -31,14 +31,7 @@
                         <label for="password">Password <span class="required">*</span></label>
                         <input type="password" id="password" x-model="formData.password" required>
                         <div class="password-requirements">
-                            <p>Password must contain:</p>
-                            <ul>
-                                <li>At least 8 characters</li>
-                                <li>One uppercase letter</li>
-                                <li>One lowercase letter</li>
-                                <li>One number</li>
-                                <li>One special character</li>
-                            </ul>
+                            <p>Passwords should be complex, but we will accept any password</p>
                         </div>
                     </div>
                 </div>
@@ -62,7 +55,7 @@
 
                         <div class="form-group">
                             <label for="db_port">Database Port</label>
-                            <input type="number" id="db_port" x-model="formData.db_port" placeholder="3306">
+                            <input type="number" id="db_port" x-model.number="formData.db_port" placeholder="3306">
                         </div>
 
                         <div class="form-group">
@@ -87,7 +80,7 @@
                     
                     <div class="form-group">
                         <label for="server_port">Server Port</label>
-                        <input type="number" id="server_port" x-model="formData.server_port" placeholder="2341">
+                        <input type="number" id="server_port" x-model.number="formData.server_port" placeholder="2342">
                     </div>
                 </div>
 
@@ -118,14 +111,21 @@
                     db_username: '',
                     db_password: '',
                     db_name: 'waterlogger',
-                    server_port: 2341
+                    server_port: 2342
                 },
                 
                 async submitSetup() {
                     this.loading = true;
                     this.error = '';
                     
-                    console.log('Submitting setup with data:', this.formData);
+                    // Ensure numeric fields are properly typed
+                    const payload = {
+                        ...this.formData,
+                        server_port: parseInt(this.formData.server_port) || 2342,
+                        db_port: parseInt(this.formData.db_port) || 3306
+                    };
+                    
+                    console.log('Submitting setup with data:', payload);
                     
                     try {
                         const response = await fetch('/api/setup', {
@@ -133,7 +133,7 @@
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify(this.formData)
+                            body: JSON.stringify(payload)
                         });
                         
                         console.log('Response status:', response.status);
