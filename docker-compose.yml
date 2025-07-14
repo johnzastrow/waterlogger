@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  waterlogger:
+    build: .
+    ports:
+      - "2341:2341"
+    environment:
+      - GIN_MODE=release
+    volumes:
+      - ./data:/app/data
+      - ./config.yaml:/app/config.yaml
+    depends_on:
+      - db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2341/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: mariadb:10.9
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=waterlogger
+      - MYSQL_USER=waterlogger
+      - MYSQL_PASSWORD=waterlogger
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Optional: phpMyAdmin for database management
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=waterlogger
+      - PMA_PASSWORD=waterlogger
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    restart: unless-stopped
+    profiles:
+      - tools
+
+volumes:
+  db_data:
+
+networks:
+  default:
+    name: waterlogger_network

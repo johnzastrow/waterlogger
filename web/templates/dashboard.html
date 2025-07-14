@@ -1,0 +1,143 @@
+{{template "base.html" .}}
+
+{{define "content"}}
+<div class="dashboard-container" x-data="dashboard()">
+    <div class="dashboard-header">
+        <h2>Dashboard</h2>
+        <p>Welcome to your water management system</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h3>Recent Samples</h3>
+            <div class="card-content">
+                <template x-for="sample in recentSamples" :key="sample.id">
+                    <div class="sample-item">
+                        <div class="sample-info">
+                            <span class="sample-pool" x-text="sample.pool?.name || 'Unknown Pool'"></span>
+                            <span class="sample-date" x-text="formatDate(sample.sample_datetime)"></span>
+                        </div>
+                        <div class="sample-values">
+                            <span>pH: <span x-text="sample.measurements?.ph || 'N/A'"></span></span>
+                            <span>FC: <span x-text="sample.measurements?.fc || 'N/A'"></span> ppm</span>
+                        </div>
+                    </div>
+                </template>
+                <div x-show="recentSamples.length === 0" class="empty-state">
+                    No samples yet. <a href="/samples">Add your first sample</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <h3>Pool Status</h3>
+            <div class="card-content">
+                <template x-for="pool in pools" :key="pool.id">
+                    <div class="pool-item">
+                        <div class="pool-info">
+                            <span class="pool-name" x-text="pool.name"></span>
+                            <span class="pool-type" x-text="pool.type || 'Pool'"></span>
+                        </div>
+                        <div class="pool-volume" x-show="pool.volume_gallons">
+                            <span x-text="pool.volume_gallons"></span> gallons
+                        </div>
+                    </div>
+                </template>
+                <div x-show="pools.length === 0" class="empty-state">
+                    No pools configured. <a href="/pools">Add a pool</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <h3>Quick Actions</h3>
+            <div class="card-content">
+                <div class="quick-actions">
+                    <a href="/samples" class="action-btn">
+                        <span>📊</span>
+                        <span>Add Sample</span>
+                    </a>
+                    <a href="/pools" class="action-btn">
+                        <span>🏊</span>
+                        <span>Manage Pools</span>
+                    </a>
+                    <a href="/charts" class="action-btn">
+                        <span>📈</span>
+                        <span>View Charts</span>
+                    </a>
+                    <a href="/export" class="action-btn">
+                        <span>📁</span>
+                        <span>Export Data</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <h3>Water Quality Summary</h3>
+            <div class="card-content">
+                <div class="quality-indicators">
+                    <div class="indicator">
+                        <span class="indicator-label">pH Balance</span>
+                        <span class="indicator-value" x-text="qualityStatus.ph"></span>
+                    </div>
+                    <div class="indicator">
+                        <span class="indicator-label">Chlorine Level</span>
+                        <span class="indicator-value" x-text="qualityStatus.chlorine"></span>
+                    </div>
+                    <div class="indicator">
+                        <span class="indicator-label">Alkalinity</span>
+                        <span class="indicator-value" x-text="qualityStatus.alkalinity"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function dashboard() {
+        return {
+            pools: [],
+            recentSamples: [],
+            qualityStatus: {
+                ph: 'Good',
+                chlorine: 'Good',
+                alkalinity: 'Good'
+            },
+            
+            async init() {
+                await this.loadPools();
+                await this.loadRecentSamples();
+            },
+            
+            async loadPools() {
+                try {
+                    const response = await fetch('/api/pools');
+                    if (response.ok) {
+                        this.pools = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Failed to load pools:', error);
+                }
+            },
+            
+            async loadRecentSamples() {
+                try {
+                    const response = await fetch('/api/samples?limit=5');
+                    if (response.ok) {
+                        this.recentSamples = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Failed to load recent samples:', error);
+                }
+            },
+            
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            }
+        };
+    }
+</script>
+{{end}}

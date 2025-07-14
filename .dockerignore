@@ -1,0 +1,58 @@
+# Binaries
+waterlogger
+waterlogger.exe
+waterlogger-mac
+*.test
+
+# Directories
+.git
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose.yml
+build/
+dist/
+docs/
+.vscode/
+.idea/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/
+
+# Configuration files (use config.example.yaml)
+config.yaml
+
+# Documentation
+README.md
+LICENSE
+CONTRIBUTING.md
+CHANGELOG.md
+
+# CI/CD files
+.github/
+.travis.yml
+.gitlab-ci.yml
+
+# Temporary files
+tmp/
+temp/
+
+# Coverage files
+coverage.out
+coverage.html
+
+# Profile files
+*.prof

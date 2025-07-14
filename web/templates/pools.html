@@ -1,0 +1,190 @@
+{{template "base.html" .}}
+
+{{define "content"}}
+<div class="pools-container" x-data="poolsManager()">
+    <div class="page-header">
+        <h2>Pools Management</h2>
+        <button @click="showAddModal = true" class="btn btn-primary">Add Pool</button>
+    </div>
+
+    <div class="pools-grid">
+        <template x-for="pool in pools" :key="pool.id">
+            <div class="pool-card">
+                <div class="pool-header">
+                    <h3 x-text="pool.name"></h3>
+                    <div class="pool-actions">
+                        <button @click="editPool(pool)" class="btn btn-sm btn-secondary">Edit</button>
+                        <button @click="deletePool(pool.id)" class="btn btn-sm btn-danger">Delete</button>
+                    </div>
+                </div>
+                <div class="pool-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value" x-text="pool.type || 'Not specified'"></span>
+                    </div>
+                    <div class="detail-item" x-show="pool.volume_gallons">
+                        <span class="detail-label">Volume:</span>
+                        <span class="detail-value" x-text="pool.volume_gallons + ' gallons'"></span>
+                    </div>
+                    <div class="detail-item" x-show="pool.system_description">
+                        <span class="detail-label">System:</span>
+                        <span class="detail-value" x-text="pool.system_description"></span>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <div x-show="pools.length === 0" class="empty-state">
+            <p>No pools configured yet.</p>
+            <button @click="showAddModal = true" class="btn btn-primary">Add Your First Pool</button>
+        </div>
+    </div>
+
+    <!-- Add/Edit Pool Modal -->
+    <div x-show="showAddModal || showEditModal" class="modal-overlay" @click="closeModal()">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3 x-text="showEditModal ? 'Edit Pool' : 'Add Pool'"></h3>
+                <button @click="closeModal()" class="close-btn">&times;</button>
+            </div>
+            
+            <form @submit.prevent="savePool()">
+                <div class="form-group">
+                    <label for="pool_name">Pool Name <span class="required">*</span></label>
+                    <input type="text" id="pool_name" x-model="currentPool.name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pool_type">Type</label>
+                    <select id="pool_type" x-model="currentPool.type">
+                        <option value="">Select type...</option>
+                        <option value="pool">Pool</option>
+                        <option value="hot_tub">Hot Tub</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="volume_gallons">Volume (gallons)</label>
+                    <input type="number" id="volume_gallons" x-model="currentPool.volume_gallons" step="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label for="system_description">System Description</label>
+                    <textarea id="system_description" x-model="currentPool.system_description" rows="3"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" @click="closeModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" :disabled="loading">
+                        <span x-show="!loading" x-text="showEditModal ? 'Update Pool' : 'Add Pool'"></span>
+                        <span x-show="loading">Saving...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function poolsManager() {
+        return {
+            pools: [],
+            showAddModal: false,
+            showEditModal: false,
+            loading: false,
+            currentPool: {
+                id: null,
+                name: '',
+                type: '',
+                volume_gallons: null,
+                system_description: ''
+            },
+            
+            async init() {
+                await this.loadPools();
+            },
+            
+            async loadPools() {
+                try {
+                    const response = await fetch('/api/pools');
+                    if (response.ok) {
+                        this.pools = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Failed to load pools:', error);
+                }
+            },
+            
+            editPool(pool) {
+                this.currentPool = { ...pool };
+                this.showEditModal = true;
+            },
+            
+            async savePool() {
+                this.loading = true;
+                
+                try {
+                    const isEdit = this.showEditModal;
+                    const url = isEdit ? `/api/pools/${this.currentPool.id}` : '/api/pools';
+                    const method = isEdit ? 'PUT' : 'POST';
+                    
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(this.currentPool)
+                    });
+                    
+                    if (response.ok) {
+                        await this.loadPools();
+                        this.closeModal();
+                    } else {
+                        const error = await response.json();
+                        alert(error.error || 'Failed to save pool');
+                    }
+                } catch (error) {
+                    console.error('Save failed:', error);
+                    alert('Network error occurred');
+                } finally {
+                    this.loading = false;
+                }
+            },
+            
+            async deletePool(poolId) {
+                if (!confirm('Are you sure you want to delete this pool?')) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/pools/${poolId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        await this.loadPools();
+                    } else {
+                        const error = await response.json();
+                        alert(error.error || 'Failed to delete pool');
+                    }
+                } catch (error) {
+                    console.error('Delete failed:', error);
+                    alert('Network error occurred');
+                }
+            },
+            
+            closeModal() {
+                this.showAddModal = false;
+                this.showEditModal = false;
+                this.currentPool = {
+                    id: null,
+                    name: '',
+                    type: '',
+                    volume_gallons: null,
+                    system_description: ''
+                };
+            }
+        };
+    }
+</script>
+{{end}}

@@ -1,0 +1,19 @@
+server:
+  port: 2341
+  host: "localhost"
+
+database:
+  type: "sqlite" # sqlite or mariadb
+  sqlite:
+    path: "waterlogger.db"
+  mariadb:
+    host: "localhost"
+    port: 3306
+    username: "waterlogger"
+    password: "password"
+    database: "waterlogger"
+
+app:
+  name: "Waterlogger"
+  version: "1.0.0"
+  secret_key: "change-this-to-a-secure-random-string"

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod:*)",
+      "Bash(apt:*)",
+      "Bash(apt install:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(export PATH=$PATH:/tmp/go/bin)",
+      "Bash(go:*)",
+      "Bash(mkdir:*)",
+      "Bash(./waterlogger --help)",
+      "Bash(./waterlogger --version)",
+      "Bash(pkill:*)",
+      "Bash(ls:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": []
+  }
+}

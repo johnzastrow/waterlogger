@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <div class="setup-container" x-data="setupWizard()">
+        <div class="setup-card">
+            <h1>Welcome to Waterlogger</h1>
+            <p>Let's set up your water management system</p>
+
+            <form @submit.prevent="submitSetup">
+                <div class="form-section">
+                    <h3>Administrator Account</h3>
+                    
+                    <div class="form-group">
+                        <label for="username">Username <span class="required">*</span></label>
+                        <input type="text" id="username" x-model="formData.username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email <span class="required">*</span></label>
+                        <input type="email" id="email" x-model="formData.email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password <span class="required">*</span></label>
+                        <input type="password" id="password" x-model="formData.password" required>
+                        <div class="password-requirements">
+                            <p>Password must contain:</p>
+                            <ul>
+                                <li>At least 8 characters</li>
+                                <li>One uppercase letter</li>
+                                <li>One lowercase letter</li>
+                                <li>One number</li>
+                                <li>One special character</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Database Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label for="database_type">Database Type <span class="required">*</span></label>
+                        <select id="database_type" x-model="formData.database_type" required>
+                            <option value="sqlite">SQLite (Recommended)</option>
+                            <option value="mariadb">MariaDB</option>
+                        </select>
+                    </div>
+
+                    <div x-show="formData.database_type === 'mariadb'" class="form-subsection">
+                        <div class="form-group">
+                            <label for="db_host">Database Host</label>
+                            <input type="text" id="db_host" x-model="formData.db_host" placeholder="localhost">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="db_port">Database Port</label>
+                            <input type="number" id="db_port" x-model="formData.db_port" placeholder="3306">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="db_username">Database Username</label>
+                            <input type="text" id="db_username" x-model="formData.db_username">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="db_password">Database Password</label>
+                            <input type="password" id="db_password" x-model="formData.db_password">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="db_name">Database Name</label>
+                            <input type="text" id="db_name" x-model="formData.db_name" placeholder="waterlogger">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Server Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label for="server_port">Server Port</label>
+                        <input type="number" id="server_port" x-model="formData.server_port" placeholder="2341">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" :disabled="loading">
+                        <span x-show="!loading">Complete Setup</span>
+                        <span x-show="loading">Setting up...</span>
+                    </button>
+                </div>
+
+                <div x-show="error" class="error-message" x-text="error"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function setupWizard() {
+            return {
+                loading: false,
+                error: '',
+                formData: {
+                    username: '',
+                    email: '',
+                    password: '',
+                    database_type: 'sqlite',
+                    db_host: 'localhost',
+                    db_port: 3306,
+                    db_username: '',
+                    db_password: '',
+                    db_name: 'waterlogger',
+                    server_port: 2341
+                },
+                
+                async submitSetup() {
+                    this.loading = true;
+                    this.error = '';
+                    
+                    try {
+                        const response = await fetch('/api/setup', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(this.formData)
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            window.location.href = '/login';
+                        } else {
+                            this.error = data.error || 'Setup failed';
+                        }
+                    } catch (error) {
+                        this.error = 'Network error occurred';
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>
