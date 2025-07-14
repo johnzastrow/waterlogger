@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.title}}</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/debug.js"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
 <body>
@@ -50,27 +51,21 @@
                     this.loading = true;
                     this.error = '';
                     
-                    try {
-                        const response = await fetch('/api/login', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(this.formData)
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (response.ok) {
-                            window.location.href = '/';
-                        } else {
-                            this.error = data.error || 'Login failed';
-                        }
-                    } catch (error) {
-                        this.error = 'Network error occurred';
-                    } finally {
-                        this.loading = false;
+                    const result = await WaterloggerHelpers.submitForm(
+                        this.formData, 
+                        '/api/login', 
+                        'POST', 
+                        'Login'
+                    );
+                    
+                    if (result.success) {
+                        console.log('Login successful, redirecting to dashboard');
+                        window.location.href = '/';
+                    } else {
+                        this.error = result.error;
                     }
+                    
+                    this.loading = false;
                 }
             };
         }

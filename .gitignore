@@ -45,6 +45,7 @@ logs/
 # Temporary files
 tmp/
 temp/
+go/
 
 # Node modules (if any frontend build tools are added)
 node_modules/

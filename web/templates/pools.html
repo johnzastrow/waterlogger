@@ -1,6 +1,7 @@
 {{template "base.html" .}}
 
 {{define "content"}}
+<script src="/static/js/debug.js"></script>
 <div class="pools-container" x-data="poolsManager()">
     <div class="page-header">
         <h2>Pools Management</h2>
@@ -105,13 +106,9 @@
             },
             
             async loadPools() {
-                try {
-                    const response = await fetch('/api/pools');
-                    if (response.ok) {
-                        this.pools = await response.json();
-                    }
-                } catch (error) {
-                    console.error('Failed to load pools:', error);
+                const result = await WaterloggerHelpers.loadData('/api/pools', 'pools');
+                if (result.success) {
+                    this.pools = result.data;
                 }
             },
             
@@ -123,32 +120,25 @@
             async savePool() {
                 this.loading = true;
                 
-                try {
-                    const isEdit = this.showEditModal;
-                    const url = isEdit ? `/api/pools/${this.currentPool.id}` : '/api/pools';
-                    const method = isEdit ? 'PUT' : 'POST';
-                    
-                    const response = await fetch(url, {
-                        method: method,
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(this.currentPool)
-                    });
-                    
-                    if (response.ok) {
-                        await this.loadPools();
-                        this.closeModal();
-                    } else {
-                        const error = await response.json();
-                        alert(error.error || 'Failed to save pool');
-                    }
-                } catch (error) {
-                    console.error('Save failed:', error);
-                    alert('Network error occurred');
-                } finally {
-                    this.loading = false;
+                const isEdit = this.showEditModal;
+                const url = isEdit ? `/api/pools/${this.currentPool.id}` : '/api/pools';
+                const method = isEdit ? 'PUT' : 'POST';
+                
+                const result = await WaterloggerHelpers.submitForm(
+                    this.currentPool, 
+                    url, 
+                    method, 
+                    isEdit ? 'Pool update' : 'Pool creation'
+                );
+                
+                if (result.success) {
+                    await this.loadPools();
+                    this.closeModal();
+                } else {
+                    alert(result.error);
                 }
+                
+                this.loading = false;
             },
             
             async deletePool(poolId) {
@@ -156,20 +146,17 @@
                     return;
                 }
                 
-                try {
-                    const response = await fetch(`/api/pools/${poolId}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (response.ok) {
-                        await this.loadPools();
-                    } else {
-                        const error = await response.json();
-                        alert(error.error || 'Failed to delete pool');
-                    }
-                } catch (error) {
-                    console.error('Delete failed:', error);
-                    alert('Network error occurred');
+                const result = await WaterloggerHelpers.submitForm(
+                    {}, 
+                    `/api/pools/${poolId}`, 
+                    'DELETE', 
+                    'Pool deletion'
+                );
+                
+                if (result.success) {
+                    await this.loadPools();
+                } else {
+                    alert(result.error);
                 }
             },
             

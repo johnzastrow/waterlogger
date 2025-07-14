@@ -1,6 +1,7 @@
 {{template "base.html" .}}
 
 {{define "content"}}
+<script src="/static/js/debug.js"></script>
 <div class="dashboard-container" x-data="dashboard()">
     <div class="dashboard-header">
         <h2>Dashboard</h2>
@@ -112,24 +113,16 @@
             },
             
             async loadPools() {
-                try {
-                    const response = await fetch('/api/pools');
-                    if (response.ok) {
-                        this.pools = await response.json();
-                    }
-                } catch (error) {
-                    console.error('Failed to load pools:', error);
+                const result = await WaterloggerHelpers.loadData('/api/pools', 'pools');
+                if (result.success) {
+                    this.pools = result.data;
                 }
             },
             
             async loadRecentSamples() {
-                try {
-                    const response = await fetch('/api/samples?limit=5');
-                    if (response.ok) {
-                        this.recentSamples = await response.json();
-                    }
-                } catch (error) {
-                    console.error('Failed to load recent samples:', error);
+                const result = await WaterloggerHelpers.loadData('/api/samples?limit=5', 'recent samples');
+                if (result.success) {
+                    this.recentSamples = result.data;
                 }
             },
             

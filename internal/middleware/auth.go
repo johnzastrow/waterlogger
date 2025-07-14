@@ -18,7 +18,8 @@ func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 		if strings.HasPrefix(c.Request.URL.Path, "/setup") || 
 		   strings.HasPrefix(c.Request.URL.Path, "/static") ||
 		   strings.HasPrefix(c.Request.URL.Path, "/login") ||
-		   strings.HasPrefix(c.Request.URL.Path, "/api/setup") {
+		   strings.HasPrefix(c.Request.URL.Path, "/api/setup") ||
+		   strings.HasPrefix(c.Request.URL.Path, "/api/login") {
 			c.Next()
 			return
 		}
@@ -133,14 +134,14 @@ func RequireSetup(db *gorm.DB) gin.HandlerFunc {
 
 		if count == 0 {
 			// No users exist, setup is required
-			if !strings.HasPrefix(c.Request.URL.Path, "/setup") {
+			if !strings.HasPrefix(c.Request.URL.Path, "/setup") && !strings.HasPrefix(c.Request.URL.Path, "/api/setup") {
 				c.Redirect(http.StatusTemporaryRedirect, "/setup")
 				c.Abort()
 				return
 			}
 		} else {
 			// Users exist, setup is not allowed
-			if strings.HasPrefix(c.Request.URL.Path, "/setup") {
+			if strings.HasPrefix(c.Request.URL.Path, "/setup") || strings.HasPrefix(c.Request.URL.Path, "/api/setup") {
 				c.Redirect(http.StatusTemporaryRedirect, "/")
 				c.Abort()
 				return

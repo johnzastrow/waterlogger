@@ -125,6 +125,8 @@
                     this.loading = true;
                     this.error = '';
                     
+                    console.log('Submitting setup with data:', this.formData);
+                    
                     try {
                         const response = await fetch('/api/setup', {
                             method: 'POST',
@@ -134,15 +136,23 @@
                             body: JSON.stringify(this.formData)
                         });
                         
+                        console.log('Response status:', response.status);
+                        console.log('Response headers:', response.headers);
+                        
                         const data = await response.json();
+                        console.log('Response data:', data);
                         
                         if (response.ok) {
                             window.location.href = '/login';
                         } else {
                             this.error = data.error || 'Setup failed';
+                            if (data.details) {
+                                this.error += ': ' + (Array.isArray(data.details) ? data.details.join(', ') : data.details);
+                            }
                         }
                     } catch (error) {
-                        this.error = 'Network error occurred';
+                        console.error('Setup error:', error);
+                        this.error = 'Network error: ' + error.message;
                     } finally {
                         this.loading = false;
                     }

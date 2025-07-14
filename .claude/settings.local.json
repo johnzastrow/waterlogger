@@ -13,7 +13,13 @@
       "Bash(./waterlogger --version)",
       "Bash(pkill:*)",
       "Bash(ls:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Bash(true)",
+      "Bash(sqlite3:*)",
+      "Bash(export:*)",
+      "Bash(ss:*)",
+      "Bash(kill:*)"
     ],
     "deny": []
   }
