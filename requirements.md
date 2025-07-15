@@ -641,3 +641,15 @@ Perfect! I've successfully created a comprehensive set of GitHub repository file
 
   All major features have been implemented, tested, and are ready for deployment. The application provides a robust
    foundation for pool and hot tub water management with professional-grade capabilities.
+
+
+
+Total cost:            $54.93
+Total duration (API):  4h 18m 46.6s
+Total duration (wall): 41h 3m 46.0s
+Total code changes:    13633 lines added, 669 lines removed
+Usage by model:
+    claude-3-5-haiku:  360.3k input, 18.0k output, 0 cache read, 0 cache write
+       claude-sonnet:  3.1k input, 388.3k output, 96.3m cache read, 5.3m cache write
+
+You can now use a Claude Pro subscription with Claude Code! https://claude.ai/upgrade then run /login.

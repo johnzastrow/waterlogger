@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -944,6 +945,62 @@ func (h *Handlers) ExportExcel(c *gin.Context) {
 	c.Header("Content-Type", "text/csv")
 	c.Header("Content-Disposition", "attachment; filename=waterlogger_export.csv")
 	c.String(http.StatusOK, csvContent)
+}
+
+func (h *Handlers) ExportBackup(c *gin.Context) {
+	// Get all data for backup
+	var users []models.User
+	var pools []models.Pool
+	var kits []models.Kit
+	var samples []models.Sample
+	
+	if err := h.db.Find(&users).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
+	
+	if err := h.db.Find(&pools).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pools"})
+		return
+	}
+	
+	if err := h.db.Find(&kits).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch kits"})
+		return
+	}
+	
+	if err := h.db.Preload("Pool").Preload("Measurements").Preload("Indices").Find(&samples).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch samples"})
+		return
+	}
+	
+	// Create backup data structure
+	backupData := map[string]interface{}{
+		"users": users,
+		"pools": pools,
+		"kits": kits,
+		"samples": samples,
+		"exported_at": time.Now().Format("2006-01-02 15:04:05"),
+		"version": "1.0.0",
+	}
+	
+	// Generate JSON backup
+	jsonData, err := json.MarshalIndent(backupData, "", "  ")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate backup"})
+		return
+	}
+	
+	// Generate filename
+	filename := fmt.Sprintf("WL_backup_%s.json", time.Now().Format("20060102_150405"))
+	
+	// Set headers for file download
+	c.Header("Content-Type", "application/json")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	c.Header("Content-Length", fmt.Sprintf("%d", len(jsonData)))
+	
+	// Send the backup file
+	c.Data(http.StatusOK, "application/json", jsonData)
 }
 
 func (h *Handlers) ExportMarkdown(c *gin.Context) {
