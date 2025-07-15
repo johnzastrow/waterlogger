@@ -19,10 +19,10 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 
 ## Screenshots
 
-![Dashboard](docs/images/dashboard.png)
+![Dashboard](docs/dashboard.png)
 *Main dashboard showing recent samples and pool status*
 
-![Setup Wizard](docs/images/setup.png)
+![Samples](docs/samples.png)
 *First-run setup wizard for configuration*
 
 ## Quick Start
