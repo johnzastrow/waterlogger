@@ -1,6 +1,6 @@
 # Waterlogger
 
-A comprehensive web application for managing pool and hot tub water chemistry parameters, with built-in calculations, data visualization, and export capabilities.
+A comprehensive web application for managing pool and hot tub water chemistry parameters, with built-in calculations, data visualization, and export capabilities. Built entirely by talking to the computer, in this case, Claude Code using the Sonnet 4 model.
 
 ## Features
 
