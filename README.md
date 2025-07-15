@@ -4,8 +4,10 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 
 ## Features
 
-- **Multi-User Support**: Multiple users can manage water testing data
+- **Multi-User Support**: Multiple users can manage water testing data with full CRUD operations
+- **User Management**: Complete user administration with create, edit, and delete capabilities
 - **Pool Management**: Track multiple pools and hot tubs with detailed specifications
+- **Test Kit Management**: Organize and track testing equipment and supplies
 - **Water Chemistry**: Record comprehensive water parameter measurements
 - **Automatic Calculations**: LSI (Langelier Saturation Index) and RSI (Ryznar Stability Index) calculations
 - **Data Visualization**: Interactive charts showing parameter trends over time
@@ -13,6 +15,7 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 - **Responsive Design**: Mobile-friendly interface with modern UI
 - **Database Flexibility**: Support for SQLite and MariaDB databases
 - **Cross-Platform**: Single executable for Windows and Linux
+- **Build Timestamps**: Each build includes deployment tracking in the UI
 
 ## Screenshots
 
@@ -44,7 +47,10 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 git clone https://github.com/your-org/waterlogger.git
 cd waterlogger
 
-# Build the application
+# Build with build timestamps (recommended)
+./build.sh
+
+# Or build manually
 go build -o waterlogger cmd/waterlogger/main.go
 
 # Run the application
@@ -77,7 +83,12 @@ cd waterlogger
 # Download dependencies
 go mod tidy
 
-# Build for Windows
+# Build with timestamps (Windows PowerShell)
+$BUILD_TIME = Get-Date -Format "HH:mm:ss"
+$BUILD_DATE = Get-Date -Format "yyyy-MM-dd"
+go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
+
+# Or build manually (without timestamps)
 go build -o waterlogger.exe cmd/waterlogger/main.go
 
 # Run the application
@@ -111,7 +122,10 @@ cd waterlogger
 # Download dependencies
 go mod tidy
 
-# Build for Linux
+# Build with timestamps (recommended)
+./build.sh
+
+# Or build manually
 go build -o waterlogger cmd/waterlogger/main.go
 
 # Make executable
@@ -162,17 +176,49 @@ sudo systemctl status waterlogger
 
 ### Cross-Platform Building
 
-Build for multiple platforms:
+Build for multiple platforms with timestamps:
 
 ```bash
+# Set build timestamp variables
+BUILD_TIME=$(date '+%H:%M:%S')
+BUILD_DATE=$(date '+%Y-%m-%d')
+
 # Build for Windows (from any platform)
-GOOS=windows GOARCH=amd64 go build -o waterlogger.exe cmd/waterlogger/main.go
+GOOS=windows GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
 
 # Build for Linux (from any platform)
-GOOS=linux GOARCH=amd64 go build -o waterlogger cmd/waterlogger/main.go
+GOOS=linux GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger cmd/waterlogger/main.go
 
 # Build for macOS (from any platform)
-GOOS=darwin GOARCH=amd64 go build -o waterlogger-mac cmd/waterlogger/main.go
+GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger-mac cmd/waterlogger/main.go
+```
+
+### Build Timestamps
+
+The application includes build timestamp functionality that displays when the binary was compiled:
+
+- **Location**: Small label in the bottom-right corner of every page
+- **Format**: "Built on YYYY-MM-DD at HH:MM:SS"
+- **Behavior**: Semi-transparent by default, fully visible on hover
+- **Purpose**: Helps track deployments and identify running versions
+
+#### Building with Timestamps
+
+**Linux/macOS:**
+```bash
+# Use the provided build script
+./build.sh
+
+# Or manually
+BUILD_TIME=$(date '+%H:%M:%S') BUILD_DATE=$(date '+%Y-%m-%d') \
+go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger cmd/waterlogger/main.go
+```
+
+**Windows PowerShell:**
+```powershell
+$BUILD_TIME = Get-Date -Format "HH:mm:ss"
+$BUILD_DATE = Get-Date -Format "yyyy-MM-dd"
+go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
 ```
 
 ## Configuration
@@ -306,11 +352,23 @@ Files are named with format: `WL[timestamp].xlsx` or `WL[timestamp].md`
 - `POST /api/login` - User login
 - `POST /api/logout` - User logout
 
+#### Users
+- `GET /api/users` - List all users
+- `POST /api/users` - Create new user
+- `PUT /api/users/:id` - Update user
+- `DELETE /api/users/:id` - Delete user
+
 #### Pools
 - `GET /api/pools` - List all pools
 - `POST /api/pools` - Create new pool
 - `PUT /api/pools/:id` - Update pool
 - `DELETE /api/pools/:id` - Delete pool
+
+#### Test Kits
+- `GET /api/kits` - List all test kits
+- `POST /api/kits` - Create new test kit
+- `PUT /api/kits/:id` - Update test kit
+- `DELETE /api/kits/:id` - Delete test kit
 
 #### Samples
 - `GET /api/samples` - List all samples
@@ -318,9 +376,16 @@ Files are named with format: `WL[timestamp].xlsx` or `WL[timestamp].md`
 - `PUT /api/samples/:id` - Update sample
 - `DELETE /api/samples/:id` - Delete sample
 
+#### Charts
+- `GET /api/charts/data` - Get chart data for visualization
+
 #### Export
 - `GET /api/export/excel` - Export data to Excel
 - `GET /api/export/markdown` - Export data to Markdown
+
+#### Settings
+- `GET /api/settings` - Get user settings
+- `POST /api/settings` - Update user settings
 
 ## Development
 
@@ -335,14 +400,16 @@ waterlogger/
 │   ├── handlers/            # HTTP handlers
 │   ├── middleware/          # HTTP middleware
 │   ├── models/              # Data models
-│   ├── services/            # Business logic
 │   └── chemistry/           # Water chemistry calculations
 ├── web/
 │   ├── static/              # Static assets (CSS, JS)
+│   │   ├── css/             # Stylesheets
+│   │   └── js/              # JavaScript files
 │   └── templates/           # HTML templates
-├── migrations/              # Database migrations
-├── docs/                    # Documentation
-└── config.yaml              # Configuration file
+├── build.sh                 # Build script with timestamps
+├── config.yaml              # Configuration file
+├── CLAUDE.md               # Development notes
+└── README.md               # This file
 ```
 
 ### Testing
@@ -423,10 +490,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### Version 1.0.0
 - Initial release
 - Core water chemistry tracking
-- Multi-user support
-- Export functionality
-- Setup wizard
-- Cross-platform support
+- Multi-user support with authentication
+- User management system (CRUD operations)
+- Pool and test kit management
+- Export functionality (Excel and Markdown)
+- Interactive data visualization
+- Setup wizard for initial configuration
+- Cross-platform support (Windows and Linux)
+- Build timestamp tracking
+- Database migration tools
+- Password reset utility
+- Responsive web design
 
 ---
 

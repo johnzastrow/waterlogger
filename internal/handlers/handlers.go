@@ -3,8 +3,11 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"time"
 
@@ -32,6 +35,8 @@ func NewHandlers(db *gorm.DB, cfg *config.Config) *Handlers {
 func (h *Handlers) SetupWizardPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "setup.html", gin.H{
 		"title": "Setup Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
@@ -141,6 +146,8 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 func (h *Handlers) LoginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", gin.H{
 		"title": "Login - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
@@ -182,6 +189,8 @@ func (h *Handlers) LogoutAPI(c *gin.Context) {
 func (h *Handlers) Dashboard(c *gin.Context) {
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"title": "Dashboard - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
@@ -189,12 +198,16 @@ func (h *Handlers) Dashboard(c *gin.Context) {
 func (h *Handlers) PoolsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "pools.html", gin.H{
 		"title": "Pools - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
 func (h *Handlers) KitsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "kits.html", gin.H{
 		"title": "Test Kits - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
@@ -267,6 +280,8 @@ func (h *Handlers) DeletePool(c *gin.Context) {
 func (h *Handlers) SamplesPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "samples.html", gin.H{
 		"title": "Samples - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
@@ -343,18 +358,44 @@ func (h *Handlers) UpdateSample(c *gin.Context) {
 		return
 	}
 
+	// Store measurements separately to avoid GORM auto-save conflicts
+	measurementsData := sample.Measurements
+	sample.Measurements = nil
+	sample.Indices = nil
+
 	// Update sample
 	if err := h.db.Save(&sample).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update sample"})
 		return
 	}
 
+	// Restore measurements data for processing
+	sample.Measurements = measurementsData
+
 	// Update or create measurements if provided
 	if sample.Measurements != nil {
 		sample.Measurements.SampleID = sample.ID
-		if err := h.db.Save(sample.Measurements).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update measurements"})
-			return
+		
+		// Find existing measurements for this sample
+		var existingMeasurements models.Measurements
+		if err := h.db.Where("sample_id = ?", sample.ID).First(&existingMeasurements).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				// No existing measurements, create new ones
+				if err := h.db.Create(sample.Measurements).Error; err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create measurements"})
+					return
+				}
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query existing measurements"})
+				return
+			}
+		} else {
+			// Update existing measurements
+			sample.Measurements.ID = existingMeasurements.ID
+			if err := h.db.Save(sample.Measurements).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update measurements"})
+				return
+			}
 		}
 
 		// Always delete existing indices first
@@ -407,18 +448,25 @@ func (h *Handlers) DeleteSample(c *gin.Context) {
 func (h *Handlers) ChartsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "charts.html", gin.H{
 		"title": "Charts - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
+
 
 func (h *Handlers) ExportPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "export.html", gin.H{
 		"title": "Export - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
 func (h *Handlers) SettingsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "settings.html", gin.H{
 		"title": "Settings - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
@@ -428,19 +476,142 @@ func (h *Handlers) GetUsers(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
+	
+	// Don't return passwords in the response
+	for i := range users {
+		users[i].Password = ""
+	}
+	
 	c.JSON(http.StatusOK, users)
 }
 
 func (h *Handlers) CreateUser(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	var createData struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	
+	if err := c.ShouldBindJSON(&createData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate password requirements
+	if errors := middleware.ValidatePassword(createData.Password); len(errors) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password validation failed", "details": errors})
+		return
+	}
+
+	// Hash password
+	hashedPassword, err := middleware.HashPassword(createData.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// Create user model
+	user := models.User{
+		Username: createData.Username,
+		Email:    createData.Email,
+		Password: hashedPassword,
+	}
+
+	// Create user
+	if err := h.db.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+
+	// Don't return the password in the response
+	user.Password = ""
+	c.JSON(http.StatusCreated, user)
 }
 
 func (h *Handlers) UpdateUser(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	userID := c.Param("id")
+	
+	var user models.User
+	if err := h.db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	var updateData struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	
+	if err := c.ShouldBindJSON(&updateData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update fields
+	if updateData.Username != "" {
+		user.Username = updateData.Username
+	}
+	if updateData.Email != "" {
+		user.Email = updateData.Email
+	}
+	
+	// Update password if provided
+	if updateData.Password != "" {
+		// Validate password requirements
+		if errors := middleware.ValidatePassword(updateData.Password); len(errors) > 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Password validation failed", "details": errors})
+			return
+		}
+
+		// Hash password
+		hashedPassword, err := middleware.HashPassword(updateData.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+			return
+		}
+		user.Password = hashedPassword
+	}
+
+	// Save user
+	if err := h.db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+
+	// Don't return the password in the response
+	user.Password = ""
+	c.JSON(http.StatusOK, user)
 }
 
 func (h *Handlers) DeleteUser(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+	userID := c.Param("id")
+	
+	var user models.User
+	if err := h.db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Prevent deletion of the last user
+	var userCount int64
+	if err := h.db.Model(&models.User{}).Count(&userCount).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check user count"})
+		return
+	}
+	
+	if userCount <= 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete the last user"})
+		return
+	}
+
+	// Delete user
+	if err := h.db.Delete(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
 func (h *Handlers) GetKits(c *gin.Context) {
@@ -571,11 +742,50 @@ func (h *Handlers) DeleteKit(c *gin.Context) {
 func (h *Handlers) GetChartData(c *gin.Context) {
 	poolID := c.Query("pool_id")
 	parameter := c.Query("parameter")
+	days := c.Query("days")
 	
-	fmt.Printf("DEBUG: Chart request - pool_id: %s, parameter: %s\n", poolID, parameter)
+	fmt.Printf("DEBUG: Chart request - pool_id: %s, parameter: %s, days: %s\n", poolID, parameter, days)
 	
-	if poolID == "" || parameter == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "pool_id and parameter are required"})
+	// If no parameter is specified, return all samples (for charts page)
+	if parameter == "" {
+		// Get query parameters
+		daysInt := 30
+		if days != "" {
+			if d, err := strconv.Atoi(days); err == nil {
+				daysInt = d
+			}
+		}
+		
+		// Calculate date range
+		startDate := time.Now().AddDate(0, 0, -daysInt)
+		
+		// Build query
+		query := h.db.Preload("Pool").Preload("Measurements").Preload("Indices")
+		
+		// Filter by pool if specified
+		if poolID != "" {
+			query = query.Where("pool_id = ?", poolID)
+		}
+		
+		// Filter by date range using proper column name
+		query = query.Where("sample_datetime >= ?", startDate)
+		
+		// Order by date
+		query = query.Order("sample_datetime ASC")
+		
+		var samples []models.Sample
+		if err := query.Find(&samples).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch chart data"})
+			return
+		}
+		
+		c.JSON(http.StatusOK, samples)
+		return
+	}
+	
+	// Original parameter-specific logic for backward compatibility
+	if poolID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pool_id is required"})
 		return
 	}
 	
@@ -585,13 +795,13 @@ func (h *Handlers) GetChartData(c *gin.Context) {
 	
 	// Add date range filter if provided
 	if startDate := c.Query("start_date"); startDate != "" {
-		query = query.Where("sample_date_time >= ?", startDate)
+		query = query.Where("sample_datetime >= ?", startDate)
 	}
 	if endDate := c.Query("end_date"); endDate != "" {
-		query = query.Where("sample_date_time <= ?", endDate)
+		query = query.Where("sample_datetime <= ?", endDate)
 	}
 	
-	if err := query.Order("sample_date_time ASC").Find(&samples).Error; err != nil {
+	if err := query.Order("sample_datetime ASC").Find(&samples).Error; err != nil {
 		fmt.Printf("DEBUG: Chart query error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch chart data"})
 		return
@@ -807,6 +1017,31 @@ func (h *Handlers) ExportMarkdown(c *gin.Context) {
 			
 			mdContent += "---\n\n"
 		}
+	}
+	
+	// Add appendices at the bottom
+	mdContent += "\n\n---\n\n# Appendices\n\n"
+	
+	// Read all markdown files from the appendices directory
+	appendicesDir := "appendices"
+	if files, err := ioutil.ReadDir(appendicesDir); err == nil {
+		// Sort files by name for consistent ordering
+		sort.Slice(files, func(i, j int) bool {
+			return files[i].Name() < files[j].Name()
+		})
+		
+		for _, file := range files {
+			if filepath.Ext(file.Name()) == ".md" {
+				filePath := filepath.Join(appendicesDir, file.Name())
+				if content, err := ioutil.ReadFile(filePath); err == nil {
+					mdContent += string(content) + "\n\n"
+				} else {
+					log.Printf("Warning: Failed to read appendix file %s: %v", filePath, err)
+				}
+			}
+		}
+	} else {
+		log.Printf("Warning: Failed to read appendices directory: %v", err)
 	}
 	
 	// Set headers for file download

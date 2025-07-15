@@ -107,26 +107,26 @@
                             <div class="indicator">
                                 <span class="indicator-label">LSI:</span>
                                 <span class="indicator-value" 
-                                      :class="getLSIColor(pool.latestSample?.indices?.lsi)"
-                                      x-text="pool.latestSample?.indices?.lsi ? pool.latestSample.indices.lsi.toFixed(1) : 'N/A'"></span>
+                                      :class="getLSIColor(pool.latestSample && pool.latestSample.indices ? pool.latestSample.indices.lsi : null)"
+                                      x-text="pool.latestSample && pool.latestSample.indices && pool.latestSample.indices.lsi !== null ? pool.latestSample.indices.lsi.toFixed(1) : 'N/A'"></span>
                             </div>
                             <div class="indicator">
                                 <span class="indicator-label">Free Chlorine:</span>
                                 <span class="indicator-value" 
-                                      :class="getFreeChlorineColor(pool.latestSample?.measurements?.fc)"
-                                      x-text="pool.latestSample?.measurements?.fc ? pool.latestSample.measurements.fc.toFixed(1) : 'N/A'"></span>
+                                      :class="getFreeChlorineColor(pool.latestSample && pool.latestSample.measurements ? pool.latestSample.measurements.fc : null)"
+                                      x-text="pool.latestSample && pool.latestSample.measurements && pool.latestSample.measurements.fc !== null ? pool.latestSample.measurements.fc.toFixed(1) : 'N/A'"></span>
                             </div>
                             <div class="indicator">
                                 <span class="indicator-label">Total Chlorine:</span>
                                 <span class="indicator-value" 
-                                      :class="getTotalChlorineColor(pool.latestSample?.measurements?.tc)"
-                                      x-text="pool.latestSample?.measurements?.tc ? pool.latestSample.measurements.tc.toFixed(1) : 'N/A'"></span>
+                                      :class="getTotalChlorineColor(pool.latestSample && pool.latestSample.measurements ? pool.latestSample.measurements.tc : null)"
+                                      x-text="pool.latestSample && pool.latestSample.measurements && pool.latestSample.measurements.tc !== null ? pool.latestSample.measurements.tc.toFixed(1) : 'N/A'"></span>
                             </div>
                             <div class="indicator">
                                 <span class="indicator-label">Combined Chlorine:</span>
                                 <span class="indicator-value" 
-                                      :class="getCombinedChlorineColor(pool.latestSample?.measurements?.tc, pool.latestSample?.measurements?.fc)"
-                                      x-text="getCombinedChlorine(pool.latestSample?.measurements?.tc, pool.latestSample?.measurements?.fc)"></span>
+                                      :class="getCombinedChlorineColor(pool.latestSample && pool.latestSample.measurements ? pool.latestSample.measurements.tc : null, pool.latestSample && pool.latestSample.measurements ? pool.latestSample.measurements.fc : null)"
+                                      x-text="getCombinedChlorine(pool.latestSample && pool.latestSample.measurements ? pool.latestSample.measurements.tc : null, pool.latestSample && pool.latestSample.measurements ? pool.latestSample.measurements.fc : null)"></span>
                             </div>
                         </div>
                         <div x-show="!pool.latestSample" class="empty-state">
@@ -150,9 +150,11 @@
             poolsWithLatestSamples: [],
             
             async init() {
+                console.log('Dashboard initializing...');
                 await this.loadPools();
                 await this.loadRecentSamples();
                 await this.loadPoolsWithLatestSamples();
+                console.log('Dashboard initialization complete');
             },
             
             async loadPools() {
@@ -182,6 +184,14 @@
                                 new Date(current.sample_datetime) > new Date(latest.sample_datetime) ? current : latest
                             ) : null;
                         
+                        // Debug log the latest sample data
+                        if (latestSample) {
+                            console.log('Latest sample for pool', pool.name, ':', latestSample);
+                            console.log('  - LSI:', latestSample.indices?.lsi);
+                            console.log('  - FC:', latestSample.measurements?.fc);
+                            console.log('  - TC:', latestSample.measurements?.tc);
+                        }
+                        
                         return {
                             ...pool,
                             latestSample
@@ -196,37 +206,59 @@
             },
             
             getLSIColor(lsi) {
+                console.log('LSI Color - Input:', lsi, 'Type:', typeof lsi);
                 if (lsi === null || lsi === undefined) return '';
-                if (lsi >= -0.3 && lsi <= 0.3) return 'value-good';
-                if (lsi < -0.3) return 'value-bad';
-                if (lsi > 0.3) return 'value-high';
-                return '';
+                const lsiNum = Number(lsi);
+                console.log('LSI Color - Converted:', lsiNum, 'isNaN:', isNaN(lsiNum));
+                if (isNaN(lsiNum)) return '';
+                let result = '';
+                if (lsiNum >= -0.3 && lsiNum <= 0.3) result = 'value-good';
+                else if (lsiNum < -0.3) result = 'value-bad';
+                else if (lsiNum > 0.3) result = 'value-high';
+                console.log('LSI Color - Result:', result, 'for value:', lsiNum);
+                return result;
             },
             
             getFreeChlorineColor(fc) {
+                console.log('FC Color - Input:', fc, 'Type:', typeof fc);
                 if (fc === null || fc === undefined) return '';
-                if (fc >= 1 && fc <= 3) return 'value-good';
-                if (fc < 1) return 'value-bad';
-                if (fc > 3) return 'value-high';
-                return '';
+                const fcNum = Number(fc);
+                console.log('FC Color - Converted:', fcNum, 'isNaN:', isNaN(fcNum));
+                if (isNaN(fcNum)) return '';
+                let result = '';
+                if (fcNum >= 1 && fcNum <= 3) result = 'value-good';
+                else if (fcNum < 1) result = 'value-bad';
+                else if (fcNum > 3) result = 'value-high';
+                console.log('FC Color - Result:', result, 'for value:', fcNum);
+                return result;
             },
             
             getTotalChlorineColor(tc) {
                 if (tc === null || tc === undefined) return '';
-                if (tc >= 0 && tc <= 1) return 'value-good';
+                const tcNum = Number(tc);
+                if (isNaN(tcNum)) return '';
+                if (tcNum >= 0 && tcNum <= 1) return 'value-good';
                 return 'value-bad';
             },
             
             getCombinedChlorineColor(tc, fc) {
                 if (tc === null || tc === undefined || fc === null || fc === undefined) return '';
-                const combined = tc - fc;
+                const tcNum = Number(tc);
+                const fcNum = Number(fc);
+                if (isNaN(tcNum) || isNaN(fcNum)) return '';
+                const combined = tcNum - fcNum;
+                // Handle negative combined chlorine (impossible but can happen with bad data)
+                if (combined < 0) return 'value-bad';
                 if (combined >= 0 && combined <= 0.2) return 'value-good';
                 return 'value-bad';
             },
             
             getCombinedChlorine(tc, fc) {
                 if (tc === null || tc === undefined || fc === null || fc === undefined) return 'N/A';
-                return (tc - fc).toFixed(1);
+                const tcNum = Number(tc);
+                const fcNum = Number(fc);
+                if (isNaN(tcNum) || isNaN(fcNum)) return 'N/A';
+                return (tcNum - fcNum).toFixed(1);
             }
         };
     }
@@ -251,5 +283,9 @@
             }
         }
     </script>
+
+    <footer class="build-info">
+        <small>Built on {{.BuildDate}} at {{.BuildTime}}</small>
+    </footer>
 </body>
 </html>

@@ -20,6 +20,7 @@
                 <a href="/samples" class="navbar-item">Samples</a>
                 <a href="/charts" class="navbar-item">Charts</a>
                 <a href="/export" class="navbar-item">Export</a>
+                <a href="/users" class="navbar-item">Users</a>
                 <a href="/settings" class="navbar-item">Settings</a>
                 <a href="#" class="navbar-item" onclick="logout()">Logout</a>
             </div>
@@ -74,6 +75,42 @@
         </div>
 
         <div class="settings-section">
+            <h3>👥 User Management</h3>
+            <div class="user-management">
+                <div class="section-header">
+                    <p>Manage system users and their access</p>
+                    <button @click="showCreateModal = true" class="btn btn-primary">
+                        <span>➕</span> Add User
+                    </button>
+                </div>
+                
+                <div class="users-list">
+                    <template x-for="user in users" :key="user.id">
+                        <div class="user-card">
+                            <div class="user-info">
+                                <h4 x-text="user.username"></h4>
+                                <p x-text="user.email"></p>
+                                <small x-text="'Created: ' + formatDate(user.created_at)"></small>
+                            </div>
+                            <div class="user-actions">
+                                <button @click="editUser(user)" class="btn btn-sm btn-secondary">
+                                    <span>✏️</span> Edit
+                                </button>
+                                <button @click="confirmDelete(user)" class="btn btn-sm btn-danger">
+                                    <span>🗑️</span> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <div x-show="users.length === 0" class="empty-state">
+                        <p>No users found. This is unusual - there should be at least one admin user.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
             <h3>Data Management</h3>
             <div class="data-actions">
                 <button @click="exportData()" class="btn btn-secondary">
@@ -88,6 +125,98 @@
 
     <div x-show="message" class="success-message" x-text="message"></div>
     <div x-show="error" class="error-message" x-text="error"></div>
+    
+    <!-- Create User Modal -->
+    <div x-show="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New User</h3>
+                <button @click="showCreateModal = false" class="close-btn">&times;</button>
+            </div>
+            <form @submit.prevent="createUser()">
+                <div class="form-group">
+                    <label for="create-username">Username <span class="required">*</span></label>
+                    <input type="text" id="create-username" x-model="createForm.username" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="create-email">Email <span class="required">*</span></label>
+                    <input type="email" id="create-email" x-model="createForm.email" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="create-password">Password <span class="required">*</span></label>
+                    <input type="password" id="create-password" x-model="createForm.password" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="create-confirm-password">Confirm Password <span class="required">*</span></label>
+                    <input type="password" id="create-confirm-password" x-model="createForm.confirmPassword" required autocomplete="new-password">
+                </div>
+                <div class="form-actions">
+                    <button type="button" @click="showCreateModal = false" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+                        <span x-show="!isSubmitting">Create User</span>
+                        <span x-show="isSubmitting">Creating...</span>
+                    </button>
+                </div>
+            </form>
+            <div x-show="userError" class="error-message" x-text="userError"></div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div x-show="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit User</h3>
+                <button @click="showEditModal = false" class="close-btn">&times;</button>
+            </div>
+            <form @submit.prevent="updateUser()">
+                <div class="form-group">
+                    <label for="edit-username">Username <span class="required">*</span></label>
+                    <input type="text" id="edit-username" x-model="editForm.username" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-email">Email <span class="required">*</span></label>
+                    <input type="email" id="edit-email" x-model="editForm.email" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-password">New Password (leave blank to keep current)</label>
+                    <input type="password" id="edit-password" x-model="editForm.password">
+                </div>
+                <div class="form-group">
+                    <label for="edit-confirm-password">Confirm New Password</label>
+                    <input type="password" id="edit-confirm-password" x-model="editForm.confirmPassword">
+                </div>
+                <div class="form-actions">
+                    <button type="button" @click="showEditModal = false" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+                        <span x-show="!isSubmitting">Update User</span>
+                        <span x-show="isSubmitting">Updating...</span>
+                    </button>
+                </div>
+            </form>
+            <div x-show="userError" class="error-message" x-text="userError"></div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Delete</h3>
+                <button @click="showDeleteModal = false" class="close-btn">&times;</button>
+            </div>
+            <p>Are you sure you want to delete user <strong x-text="deleteForm.username"></strong>?</p>
+            <p class="text-danger">This action cannot be undone.</p>
+            <div class="form-actions">
+                <button @click="showDeleteModal = false" class="btn btn-secondary">Cancel</button>
+                <button @click="deleteUser()" class="btn btn-danger" :disabled="isSubmitting">
+                    <span x-show="!isSubmitting">Delete User</span>
+                    <span x-show="isSubmitting">Deleting...</span>
+                </button>
+            </div>
+            <div x-show="userError" class="error-message" x-text="userError"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -101,8 +230,34 @@
             message: '',
             error: '',
             
+            // User management properties
+            users: [],
+            showCreateModal: false,
+            showEditModal: false,
+            showDeleteModal: false,
+            isSubmitting: false,
+            userError: '',
+            createForm: {
+                username: '',
+                email: '',
+                password: '',
+                confirmPassword: ''
+            },
+            editForm: {
+                id: null,
+                username: '',
+                email: '',
+                password: '',
+                confirmPassword: ''
+            },
+            deleteForm: {
+                id: null,
+                username: ''
+            },
+            
             async init() {
                 await this.loadSettings();
+                await this.loadUsers();
             },
             
             async loadSettings() {
@@ -143,6 +298,151 @@
             async clearCache() {
                 this.message = 'Cache cleared successfully!';
                 setTimeout(() => this.message = '', 3000);
+            },
+            
+            // User management methods
+            async loadUsers() {
+                const result = await WaterloggerHelpers.loadData('/api/users', 'users');
+                if (result.success) {
+                    this.users = result.data;
+                } else {
+                    this.userError = result.error;
+                }
+            },
+
+            async createUser() {
+                this.userError = '';
+                
+                // Trim whitespace from inputs
+                const username = (this.createForm.username || '').trim();
+                const email = (this.createForm.email || '').trim();
+                const password = this.createForm.password || '';
+                const confirmPassword = this.createForm.confirmPassword || '';
+                
+                // Validate form
+                if (!username || !email || !password) {
+                    this.userError = 'Please fill in all required fields.';
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    this.userError = 'Passwords do not match.';
+                    return;
+                }
+
+                this.isSubmitting = true;
+                
+                const result = await WaterloggerHelpers.submitForm({
+                    username: username,
+                    email: email,
+                    password: password
+                }, '/api/users', 'POST', 'user creation');
+
+                this.isSubmitting = false;
+
+                if (result.success) {
+                    this.showCreateModal = false;
+                    this.createForm = { username: '', email: '', password: '', confirmPassword: '' };
+                    await this.loadUsers();
+                    this.message = 'User created successfully!';
+                    setTimeout(() => this.message = '', 3000);
+                } else {
+                    this.userError = result.error;
+                }
+            },
+
+            editUser(user) {
+                this.editForm = {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    password: '',
+                    confirmPassword: ''
+                };
+                this.showEditModal = true;
+                this.userError = '';
+            },
+
+            async updateUser() {
+                this.userError = '';
+                
+                // Validate form
+                if (!this.editForm.username || !this.editForm.email) {
+                    this.userError = 'Please fill in all required fields.';
+                    return;
+                }
+                
+                if (this.editForm.password && this.editForm.password !== this.editForm.confirmPassword) {
+                    this.userError = 'Passwords do not match.';
+                    return;
+                }
+
+                this.isSubmitting = true;
+                
+                const updateData = {
+                    username: this.editForm.username,
+                    email: this.editForm.email
+                };
+                
+                if (this.editForm.password) {
+                    updateData.password = this.editForm.password;
+                }
+
+                const result = await WaterloggerHelpers.submitForm(
+                    updateData, 
+                    `/api/users/${this.editForm.id}`, 
+                    'PUT', 
+                    'user update'
+                );
+
+                this.isSubmitting = false;
+
+                if (result.success) {
+                    this.showEditModal = false;
+                    this.editForm = { id: null, username: '', email: '', password: '', confirmPassword: '' };
+                    await this.loadUsers();
+                    this.message = 'User updated successfully!';
+                    setTimeout(() => this.message = '', 3000);
+                } else {
+                    this.userError = result.error;
+                }
+            },
+
+            confirmDelete(user) {
+                this.deleteForm = {
+                    id: user.id,
+                    username: user.username
+                };
+                this.showDeleteModal = true;
+                this.userError = '';
+            },
+
+            async deleteUser() {
+                this.isSubmitting = true;
+                
+                const result = await WaterloggerHelpers.submitForm(
+                    {}, 
+                    `/api/users/${this.deleteForm.id}`, 
+                    'DELETE', 
+                    'user deletion'
+                );
+
+                this.isSubmitting = false;
+
+                if (result.success) {
+                    this.showDeleteModal = false;
+                    this.deleteForm = { id: null, username: '' };
+                    await this.loadUsers();
+                    this.message = 'User deleted successfully!';
+                    setTimeout(() => this.message = '', 3000);
+                } else {
+                    this.userError = result.error;
+                }
+            },
+
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString();
             }
         };
     }
@@ -167,5 +467,9 @@
             }
         }
     </script>
+
+    <footer class="build-info">
+        <small>Built on {{.BuildDate}} at {{.BuildTime}}</small>
+    </footer>
 </body>
 </html>

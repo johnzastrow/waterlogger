@@ -28,6 +28,13 @@ GOOS=darwin GOARCH=amd64 go build -o waterlogger-mac cmd/waterlogger/main.go
 make build-all
 ```
 
+
+### jcz
+```
+go build -o waterlogger ./cmd/waterlogger
+ export GIN_MODE=release && ./waterlogger > /tmp/server.log 2>&1 &
+ps -aux | grep 'waterlogger'
+```
 ## Testing the Application
 
 ### 1. Start the Application

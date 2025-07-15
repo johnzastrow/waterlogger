@@ -114,9 +114,13 @@
             charts: {},
             
             async init() {
+                console.log('Charts page initializing...');
                 await this.loadPools();
+                console.log('Pools loaded:', this.pools);
                 await this.loadChartData();
+                console.log('Chart data loaded:', this.chartData);
                 this.initializeCharts();
+                console.log('Charts initialized');
             },
             
             async loadPools() {
@@ -134,19 +138,34 @@
                     url += `&pool_id=${this.selectedPool}`;
                 }
                 
+                console.log('Loading chart data from:', url);
                 const result = await WaterloggerHelpers.loadData(url, 'chart data');
+                console.log('Chart data result:', result);
                 if (result.success) {
                     this.chartData = result.data || [];
+                    console.log('Chart data loaded:', this.chartData.length, 'samples');
                     this.updateCharts();
+                } else {
+                    console.error('Failed to load chart data:', result.error);
                 }
                 
                 this.loading = false;
             },
             
             initializeCharts() {
-                // pH Chart
-                const phCtx = document.getElementById('phChart').getContext('2d');
-                this.charts.ph = new Chart(phCtx, {
+                console.log('Initializing charts...');
+                console.log('Chart.js available:', typeof Chart);
+                
+                if (typeof Chart === 'undefined') {
+                    console.error('Chart.js not loaded!');
+                    return;
+                }
+                
+                try {
+                    // pH Chart
+                    const phCtx = document.getElementById('phChart').getContext('2d');
+                    console.log('pH canvas context:', phCtx);
+                    this.charts.ph = new Chart(phCtx, {
                     type: 'line',
                     data: {
                         labels: [],
@@ -266,12 +285,22 @@
                         }
                     }
                 });
+                
+                console.log('All charts initialized successfully');
+                } catch (error) {
+                    console.error('Error initializing charts:', error);
+                }
             },
             
             updateCharts() {
-                if (!this.chartData.length) return;
+                console.log('Updating charts with data:', this.chartData.length, 'samples');
+                if (!this.chartData.length) {
+                    console.log('No chart data available');
+                    return;
+                }
                 
                 const labels = this.chartData.map(item => new Date(item.sample_datetime).toLocaleDateString());
+                console.log('Chart labels:', labels);
                 
                 // Update pH Chart
                 this.charts.ph.data.labels = labels;
@@ -294,6 +323,8 @@
                 this.charts.indices.data.datasets[0].data = this.chartData.map(item => item.indices?.lsi || 0);
                 this.charts.indices.data.datasets[1].data = this.chartData.map(item => item.indices?.rsi || 0);
                 this.charts.indices.update();
+                
+                console.log('Charts updated successfully');
             },
             
             async refreshCharts() {
@@ -322,5 +353,9 @@
             }
         }
     </script>
+
+    <footer class="build-info">
+        <small>Built on {{.BuildDate}} at {{.BuildTime}}</small>
+    </footer>
 </body>
 </html>

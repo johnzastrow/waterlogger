@@ -9,7 +9,11 @@
       "Bash(./test_complete_sample.sh:*)",
       "Bash(./test_indices.sh:*)",
       "Bash(./test_measurements_fix.sh:*)",
-      "Bash(jobs)"
+      "Bash(jobs)",
+      "Bash(GIN_MODE=release go run cmd/waterlogger/main.go)",
+      "Bash(./test_charts.sh:*)",
+      "Bash(fuser:*)",
+      "Bash(./build.sh)"
     ],
     "deny": []
   }
