@@ -3,7 +3,13 @@
     "allow": [
       "Bash(docker:*)",
       "Bash(grep:*)",
-      "Bash(./test_kit_creation.sh:*)"
+      "Bash(./test_kit_creation.sh:*)",
+      "Bash(./test_kit_with_date.sh:*)",
+      "Bash(./test_sample_creation.sh:*)",
+      "Bash(./test_complete_sample.sh:*)",
+      "Bash(./test_indices.sh:*)",
+      "Bash(./test_measurements_fix.sh:*)",
+      "Bash(jobs)"
     ],
     "deny": []
   }

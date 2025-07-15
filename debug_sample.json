@@ -1,0 +1,14 @@
+{
+  "pool_id": 1,
+  "sample_datetime": "2025-07-14T18:30",
+  "kit_id": 1,
+  "notes": "Sample with calculated indices",
+  "measurements": {
+    "ph": 7.5,
+    "fc": 2.0,
+    "tc": 2.0,
+    "ta": 100,
+    "ch": 150,
+    "temperature": 75
+  }
+}

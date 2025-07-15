@@ -287,30 +287,31 @@ func (h *Handlers) CreateSample(c *gin.Context) {
 		return
 	}
 
-	// Create sample in database first
+	fmt.Printf("DEBUG: Parsed sample: %+v\n", sample)
+	if sample.Measurements != nil {
+		fmt.Printf("DEBUG: Sample measurements: %+v\n", sample.Measurements)
+	}
+
+	// Set user ID if not provided
+	if sample.UserID == 0 {
+		sample.UserID = getUserID(c)
+	}
+
+	// Create sample in database - GORM will automatically create associated measurements
 	if err := h.db.Create(&sample).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sample"})
 		return
 	}
 
-	// Create measurements if provided
-	if sample.Measurements != nil {
-		sample.Measurements.SampleID = sample.ID
-		if err := h.db.Create(sample.Measurements).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create measurements"})
-			return
-		}
-
-		// Calculate water chemistry indices if we have the minimum required data
-		if sample.Measurements.PH != 0 {
-			if indices, err := chemistry.CalculateIndices(sample.Measurements); err == nil {
-				indices.SampleID = sample.ID
-				if err := h.db.Create(indices).Error; err != nil {
-					// Log error but don't fail the request
-					fmt.Printf("Warning: Failed to create indices: %v\n", err)
-				} else {
-					sample.Indices = indices
-				}
+	// Calculate water chemistry indices if we have measurements with the minimum required data
+	if sample.Measurements != nil && sample.Measurements.PH != 0 {
+		if indices, err := chemistry.CalculateIndices(sample.Measurements); err == nil {
+			indices.SampleID = sample.ID
+			if err := h.db.Create(indices).Error; err != nil {
+				// Log error but don't fail the request
+				fmt.Printf("Warning: Failed to create indices: %v\n", err)
+			} else {
+				sample.Indices = indices
 			}
 		}
 	}
@@ -356,20 +357,25 @@ func (h *Handlers) UpdateSample(c *gin.Context) {
 			return
 		}
 
-		// Recalculate indices if we have pH data
+		// Always delete existing indices first
+		h.db.Where("sample_id = ?", sample.ID).Delete(&models.Indices{})
+
+		// Recalculate indices if we have the minimum required data
 		if sample.Measurements.PH != 0 {
 			if indices, err := chemistry.CalculateIndices(sample.Measurements); err == nil {
 				indices.SampleID = sample.ID
-				
-				// Delete existing indices and create new ones
-				h.db.Where("sample_id = ?", sample.ID).Delete(&models.Indices{})
 				
 				if err := h.db.Create(indices).Error; err != nil {
 					fmt.Printf("Warning: Failed to update indices: %v\n", err)
 				} else {
 					sample.Indices = indices
 				}
+			} else {
+				fmt.Printf("Warning: Failed to calculate indices: %v\n", err)
 			}
+		} else {
+			// No pH data - indices were already deleted, so indices will be null
+			sample.Indices = nil
 		}
 	}
 
@@ -566,6 +572,8 @@ func (h *Handlers) GetChartData(c *gin.Context) {
 	poolID := c.Query("pool_id")
 	parameter := c.Query("parameter")
 	
+	fmt.Printf("DEBUG: Chart request - pool_id: %s, parameter: %s\n", poolID, parameter)
+	
 	if poolID == "" || parameter == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "pool_id and parameter are required"})
 		return
@@ -577,16 +585,19 @@ func (h *Handlers) GetChartData(c *gin.Context) {
 	
 	// Add date range filter if provided
 	if startDate := c.Query("start_date"); startDate != "" {
-		query = query.Where("sample_datetime >= ?", startDate)
+		query = query.Where("sample_date_time >= ?", startDate)
 	}
 	if endDate := c.Query("end_date"); endDate != "" {
-		query = query.Where("sample_datetime <= ?", endDate)
+		query = query.Where("sample_date_time <= ?", endDate)
 	}
 	
-	if err := query.Order("sample_datetime ASC").Find(&samples).Error; err != nil {
+	if err := query.Order("sample_date_time ASC").Find(&samples).Error; err != nil {
+		fmt.Printf("DEBUG: Chart query error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch chart data"})
 		return
 	}
+	
+	fmt.Printf("DEBUG: Found %d samples\n", len(samples))
 	
 	// Extract data points for the specified parameter
 	var dataPoints []map[string]interface{}
@@ -636,6 +647,8 @@ func (h *Handlers) GetChartData(c *gin.Context) {
 			dataPoints = append(dataPoints, point)
 		}
 	}
+	
+	fmt.Printf("DEBUG: Generated %d data points for parameter %s\n", len(dataPoints), parameter)
 	
 	c.JSON(http.StatusOK, gin.H{
 		"parameter": parameter,
@@ -797,8 +810,8 @@ func (h *Handlers) ExportMarkdown(c *gin.Context) {
 	}
 	
 	// Set headers for file download
-	c.Header("Content-Type", "text/markdown")
-	c.Header("Content-Disposition", "attachment; filename=waterlogger_export.md")
+	c.Header("Content-Type", "application/octet-stream")
+	c.Header("Content-Disposition", "attachment; filename=\"waterlogger_markdown.md\"")
 	c.String(http.StatusOK, mdContent)
 }
 

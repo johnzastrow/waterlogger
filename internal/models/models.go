@@ -1,6 +1,9 @@
 package models
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -59,6 +62,77 @@ type Kit struct {
 	Samples []Sample `gorm:"foreignKey:KitID" json:"samples,omitempty"`
 }
 
+// KitJSON is a helper struct for JSON unmarshaling with string dates
+type KitJSON struct {
+	ID              uint    `json:"id"`
+	Name            string  `json:"name"`
+	Description     *string `json:"description,omitempty"`
+	PurchasedDate   *string `json:"purchased_date,omitempty"`
+	ReplenishedDate *string `json:"replenished_date,omitempty"`
+	CreatedAt       *string `json:"created_at,omitempty"`
+	UpdatedAt       *string `json:"updated_at,omitempty"`
+	CreatedBy       uint    `json:"created_by"`
+	UpdatedBy       uint    `json:"updated_by"`
+}
+
+// UnmarshalJSON custom unmarshaler for Kit to handle date-only strings
+func (k *Kit) UnmarshalJSON(data []byte) error {
+	var kitJSON KitJSON
+	if err := json.Unmarshal(data, &kitJSON); err != nil {
+		return err
+	}
+	
+	// Set basic fields
+	k.ID = kitJSON.ID
+	k.Name = kitJSON.Name
+	k.Description = kitJSON.Description
+	k.CreatedBy = kitJSON.CreatedBy
+	k.UpdatedBy = kitJSON.UpdatedBy
+	
+	// Parse dates - handle both date-only (YYYY-MM-DD) and full datetime formats
+	if kitJSON.PurchasedDate != nil && *kitJSON.PurchasedDate != "" {
+		dateStr := strings.TrimSpace(*kitJSON.PurchasedDate)
+		if dateStr != "" {
+			var parsedDate time.Time
+			var err error
+			
+			// Try date-only format first
+			if len(dateStr) == 10 {
+				parsedDate, err = time.Parse("2006-01-02", dateStr)
+			} else {
+				// Try full datetime format
+				parsedDate, err = time.Parse(time.RFC3339, dateStr)
+			}
+			
+			if err == nil {
+				k.PurchasedDate = &parsedDate
+			}
+		}
+	}
+	
+	if kitJSON.ReplenishedDate != nil && *kitJSON.ReplenishedDate != "" {
+		dateStr := strings.TrimSpace(*kitJSON.ReplenishedDate)
+		if dateStr != "" {
+			var parsedDate time.Time
+			var err error
+			
+			// Try date-only format first
+			if len(dateStr) == 10 {
+				parsedDate, err = time.Parse("2006-01-02", dateStr)
+			} else {
+				// Try full datetime format
+				parsedDate, err = time.Parse(time.RFC3339, dateStr)
+			}
+			
+			if err == nil {
+				k.ReplenishedDate = &parsedDate
+			}
+		}
+	}
+	
+	return nil
+}
+
 // Sample represents a water testing session
 type Sample struct {
 	BaseModel
@@ -74,6 +148,122 @@ type Sample struct {
 	Kit          *Kit          `gorm:"foreignKey:KitID" json:"kit,omitempty"`
 	Measurements *Measurements `gorm:"foreignKey:SampleID" json:"measurements,omitempty"`
 	Indices      *Indices      `gorm:"foreignKey:SampleID" json:"indices,omitempty"`
+}
+
+// SampleJSON is a helper struct for JSON unmarshaling with string datetime
+type SampleJSON struct {
+	ID             uint                   `json:"id"`
+	PoolID         uint                   `json:"pool_id"`
+	SampleDateTime string                 `json:"sample_datetime"`
+	UserID         uint                   `json:"user_id"`
+	KitID          uint                   `json:"kit_id"`
+	Notes          string                 `json:"notes"`
+	CreatedAt      *string                `json:"created_at,omitempty"`
+	UpdatedAt      *string                `json:"updated_at,omitempty"`
+	CreatedBy      uint                   `json:"created_by"`
+	UpdatedBy      uint                   `json:"updated_by"`
+	Measurements   map[string]interface{} `json:"measurements,omitempty"`
+}
+
+// UnmarshalJSON custom unmarshaler for Sample to handle datetime-local format
+func (s *Sample) UnmarshalJSON(data []byte) error {
+	var sampleJSON SampleJSON
+	if err := json.Unmarshal(data, &sampleJSON); err != nil {
+		return err
+	}
+	
+	// Set basic fields
+	s.ID = sampleJSON.ID
+	s.PoolID = sampleJSON.PoolID
+	s.UserID = sampleJSON.UserID
+	s.KitID = sampleJSON.KitID
+	s.Notes = sampleJSON.Notes
+	s.CreatedBy = sampleJSON.CreatedBy
+	s.UpdatedBy = sampleJSON.UpdatedBy
+	
+	// Parse the datetime - handle multiple formats
+	if sampleJSON.SampleDateTime != "" {
+		dateStr := strings.TrimSpace(sampleJSON.SampleDateTime)
+		var parsedTime time.Time
+		var err error
+		
+		// Try datetime-local format first (YYYY-MM-DDTHH:MM)
+		if len(dateStr) == 16 && strings.Count(dateStr, "T") == 1 {
+			parsedTime, err = time.Parse("2006-01-02T15:04", dateStr)
+		} else if len(dateStr) == 19 && strings.Count(dateStr, "T") == 1 {
+			// Try datetime-local with seconds (YYYY-MM-DDTHH:MM:SS)
+			parsedTime, err = time.Parse("2006-01-02T15:04:05", dateStr)
+		} else {
+			// Try full RFC3339 format
+			parsedTime, err = time.Parse(time.RFC3339, dateStr)
+		}
+		
+		if err != nil {
+			return fmt.Errorf("failed to parse sample_datetime '%s': %v", dateStr, err)
+		}
+		
+		s.SampleDateTime = parsedTime
+	}
+	
+	// Parse measurements if provided
+	if sampleJSON.Measurements != nil {
+		measurements := &Measurements{}
+		// Initialize BaseModel fields to ensure they're not set from JSON
+		measurements.BaseModel = BaseModel{
+			ID:        0, // Let database generate
+			CreatedAt: time.Time{},
+			UpdatedAt: time.Time{},
+			CreatedBy: 0,
+			UpdatedBy: 0,
+		}
+		
+		// Helper function to convert interface{} to float64
+		getFloat := func(key string) float64 {
+			if val, ok := sampleJSON.Measurements[key]; ok {
+				if fval, ok := val.(float64); ok {
+					return fval
+				}
+			}
+			return 0
+		}
+		
+		// Helper function to convert interface{} to *float64
+		getFloatPtr := func(key string) *float64 {
+			if val, ok := sampleJSON.Measurements[key]; ok {
+				if fval, ok := val.(float64); ok {
+					return &fval
+				}
+			}
+			return nil
+		}
+		
+		// Helper function to convert interface{} to *string
+		getStringPtr := func(key string) *string {
+			if val, ok := sampleJSON.Measurements[key]; ok {
+				if sval, ok := val.(string); ok && sval != "" {
+					return &sval
+				}
+			}
+			return nil
+		}
+		
+		// Parse all measurement fields
+		measurements.FC = getFloat("fc")
+		measurements.TC = getFloat("tc")
+		measurements.PH = getFloat("ph")
+		measurements.TA = getFloat("ta")
+		measurements.CH = getFloat("ch")
+		measurements.Temperature = getFloat("temperature")
+		measurements.CYA = getFloatPtr("cya")
+		measurements.Salinity = getFloatPtr("salinity")
+		measurements.TDS = getFloatPtr("tds")
+		measurements.Appearance = getStringPtr("appearance")
+		measurements.Maintenance = getStringPtr("maintenance")
+		
+		s.Measurements = measurements
+	}
+	
+	return nil
 }
 
 // Measurements stores water chemistry measurements

@@ -90,17 +90,17 @@
                 <div class="sample-indices" x-show="sample.indices">
                     <h4>Water Quality Indices</h4>
                     <div class="indices-grid">
-                        <div class="index-item" x-show="sample.indices.lsi">
+                        <div class="index-item" x-show="sample.indices && sample.indices.lsi !== null && sample.indices.lsi !== undefined">
                             <span class="index-label">LSI (Langelier Saturation Index):</span>
-                            <span class="index-value" x-text="sample.indices.lsi"></span>
+                            <span class="index-value" x-text="sample.indices.lsi.toFixed(2)"></span>
                         </div>
-                        <div class="index-item" x-show="sample.indices.rsi">
+                        <div class="index-item" x-show="sample.indices && sample.indices.rsi !== null && sample.indices.rsi !== undefined">
                             <span class="index-label">RSI (Ryznar Stability Index):</span>
-                            <span class="index-value" x-text="sample.indices.rsi"></span>
+                            <span class="index-value" x-text="sample.indices.rsi.toFixed(2)"></span>
                         </div>
-                        <div class="index-item" x-show="sample.indices.csi">
+                        <div class="index-item" x-show="sample.indices && sample.indices.csi !== null && sample.indices.csi !== undefined">
                             <span class="index-label">CSI (Calcium Saturation Index):</span>
-                            <span class="index-value" x-text="sample.indices.csi"></span>
+                            <span class="index-value" x-text="sample.indices.csi.toFixed(2)"></span>
                         </div>
                     </div>
                 </div>

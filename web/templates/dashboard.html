@@ -45,8 +45,20 @@
                             <span class="sample-date" x-text="formatDate(sample.sample_datetime)"></span>
                         </div>
                         <div class="sample-values">
-                            <span>pH: <span x-text="sample.measurements?.ph || 'N/A'"></span></span>
-                            <span>FC: <span x-text="sample.measurements?.fc || 'N/A'"></span> ppm</span>
+                            <div class="measurement-row">
+                                <span>pH: <span x-text="sample.measurements?.ph || 'N/A'"></span></span>
+                                <span>FC: <span x-text="sample.measurements?.fc || 'N/A'"></span> ppm</span>
+                                <span>TC: <span x-text="sample.measurements?.tc || 'N/A'"></span> ppm</span>
+                            </div>
+                            <div class="measurement-row">
+                                <span>TA: <span x-text="sample.measurements?.ta || 'N/A'"></span> ppm</span>
+                                <span>CH: <span x-text="sample.measurements?.ch || 'N/A'"></span> ppm</span>
+                                <span>Temp: <span x-text="sample.measurements?.temperature || 'N/A'"></span>°F</span>
+                            </div>
+                            <div class="measurement-row" x-show="sample.measurements?.cya || sample.measurements?.salinity">
+                                <span x-show="sample.measurements?.cya">CYA: <span x-text="sample.measurements.cya"></span> ppm</span>
+                                <span x-show="sample.measurements?.salinity">Salinity: <span x-text="sample.measurements.salinity"></span> ppm</span>
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -56,25 +68,6 @@
             </div>
         </div>
 
-        <div class="dashboard-card">
-            <h3>Pool Status</h3>
-            <div class="card-content">
-                <template x-for="pool in pools" :key="pool.id">
-                    <div class="pool-item">
-                        <div class="pool-info">
-                            <span class="pool-name" x-text="pool.name"></span>
-                            <span class="pool-type" x-text="pool.type || 'Pool'"></span>
-                        </div>
-                        <div class="pool-volume" x-show="pool.volume_gallons">
-                            <span x-text="pool.volume_gallons"></span> gallons
-                        </div>
-                    </div>
-                </template>
-                <div x-show="pools.length === 0" class="empty-state">
-                    No pools configured. <a href="/pools">Add a pool</a>
-                </div>
-            </div>
-        </div>
 
         <div class="dashboard-card">
             <h3>Quick Actions</h3>
@@ -102,20 +95,47 @@
 
         <div class="dashboard-card">
             <h3>Water Quality Summary</h3>
+            <p class="summary-subtitle">Last Measurements</p>
             <div class="card-content">
-                <div class="quality-indicators">
-                    <div class="indicator">
-                        <span class="indicator-label">pH Balance</span>
-                        <span class="indicator-value" x-text="qualityStatus.ph"></span>
+                <template x-for="pool in poolsWithLatestSamples" :key="pool.id">
+                    <div class="pool-quality-section">
+                        <div class="pool-quality-header">
+                            <h4 x-text="pool.name"></h4>
+                            <span class="sample-date" x-text="pool.latestSample ? formatDate(pool.latestSample.sample_datetime) : 'No samples'"></span>
+                        </div>
+                        <div class="quality-indicators" x-show="pool.latestSample">
+                            <div class="indicator">
+                                <span class="indicator-label">LSI:</span>
+                                <span class="indicator-value" 
+                                      :class="getLSIColor(pool.latestSample?.indices?.lsi)"
+                                      x-text="pool.latestSample?.indices?.lsi ? pool.latestSample.indices.lsi.toFixed(1) : 'N/A'"></span>
+                            </div>
+                            <div class="indicator">
+                                <span class="indicator-label">Free Chlorine:</span>
+                                <span class="indicator-value" 
+                                      :class="getFreeChlorineColor(pool.latestSample?.measurements?.fc)"
+                                      x-text="pool.latestSample?.measurements?.fc ? pool.latestSample.measurements.fc.toFixed(1) : 'N/A'"></span>
+                            </div>
+                            <div class="indicator">
+                                <span class="indicator-label">Total Chlorine:</span>
+                                <span class="indicator-value" 
+                                      :class="getTotalChlorineColor(pool.latestSample?.measurements?.tc)"
+                                      x-text="pool.latestSample?.measurements?.tc ? pool.latestSample.measurements.tc.toFixed(1) : 'N/A'"></span>
+                            </div>
+                            <div class="indicator">
+                                <span class="indicator-label">Combined Chlorine:</span>
+                                <span class="indicator-value" 
+                                      :class="getCombinedChlorineColor(pool.latestSample?.measurements?.tc, pool.latestSample?.measurements?.fc)"
+                                      x-text="getCombinedChlorine(pool.latestSample?.measurements?.tc, pool.latestSample?.measurements?.fc)"></span>
+                            </div>
+                        </div>
+                        <div x-show="!pool.latestSample" class="empty-state">
+                            No measurements available. <a href="/samples">Add a sample</a>
+                        </div>
                     </div>
-                    <div class="indicator">
-                        <span class="indicator-label">Chlorine Level</span>
-                        <span class="indicator-value" x-text="qualityStatus.chlorine"></span>
-                    </div>
-                    <div class="indicator">
-                        <span class="indicator-label">Alkalinity</span>
-                        <span class="indicator-value" x-text="qualityStatus.alkalinity"></span>
-                    </div>
+                </template>
+                <div x-show="poolsWithLatestSamples.length === 0" class="empty-state">
+                    No pools configured. <a href="/pools">Add a pool</a>
                 </div>
             </div>
         </div>
@@ -127,15 +147,12 @@
         return {
             pools: [],
             recentSamples: [],
-            qualityStatus: {
-                ph: 'Good',
-                chlorine: 'Good',
-                alkalinity: 'Good'
-            },
+            poolsWithLatestSamples: [],
             
             async init() {
                 await this.loadPools();
                 await this.loadRecentSamples();
+                await this.loadPoolsWithLatestSamples();
             },
             
             async loadPools() {
@@ -152,9 +169,64 @@
                 }
             },
             
+            async loadPoolsWithLatestSamples() {
+                const poolsResult = await WaterloggerHelpers.loadData('/api/pools', 'pools');
+                const samplesResult = await WaterloggerHelpers.loadData('/api/samples', 'samples');
+                
+                if (poolsResult.success && samplesResult.success) {
+                    this.poolsWithLatestSamples = poolsResult.data.map(pool => {
+                        // Find the latest sample for this pool
+                        const poolSamples = samplesResult.data.filter(sample => sample.pool_id === pool.id);
+                        const latestSample = poolSamples.length > 0 ? 
+                            poolSamples.reduce((latest, current) => 
+                                new Date(current.sample_datetime) > new Date(latest.sample_datetime) ? current : latest
+                            ) : null;
+                        
+                        return {
+                            ...pool,
+                            latestSample
+                        };
+                    });
+                }
+            },
+            
             formatDate(dateString) {
                 const date = new Date(dateString);
                 return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            },
+            
+            getLSIColor(lsi) {
+                if (lsi === null || lsi === undefined) return '';
+                if (lsi >= -0.3 && lsi <= 0.3) return 'value-good';
+                if (lsi < -0.3) return 'value-bad';
+                if (lsi > 0.3) return 'value-high';
+                return '';
+            },
+            
+            getFreeChlorineColor(fc) {
+                if (fc === null || fc === undefined) return '';
+                if (fc >= 1 && fc <= 3) return 'value-good';
+                if (fc < 1) return 'value-bad';
+                if (fc > 3) return 'value-high';
+                return '';
+            },
+            
+            getTotalChlorineColor(tc) {
+                if (tc === null || tc === undefined) return '';
+                if (tc >= 0 && tc <= 1) return 'value-good';
+                return 'value-bad';
+            },
+            
+            getCombinedChlorineColor(tc, fc) {
+                if (tc === null || tc === undefined || fc === null || fc === undefined) return '';
+                const combined = tc - fc;
+                if (combined >= 0 && combined <= 0.2) return 'value-good';
+                return 'value-bad';
+            },
+            
+            getCombinedChlorine(tc, fc) {
+                if (tc === null || tc === undefined || fc === null || fc === undefined) return 'N/A';
+                return (tc - fc).toFixed(1);
             }
         };
     }
