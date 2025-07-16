@@ -16,7 +16,19 @@
       "Bash(./build.sh)",
       "Bash(find:*)",
       "Bash(go build:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(rm:*)",
+      "Bash(for file in *.html)",
+      "Bash(do if grep -q 'charts' \"$file\")",
+      "Bash(then sed -i '/charts/d' \"$file\")",
+      "Bash(echo:*)",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(go run:*)",
+      "Bash(kill:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }
