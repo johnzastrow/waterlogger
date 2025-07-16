@@ -13,7 +13,10 @@
       "Bash(GIN_MODE=release go run cmd/waterlogger/main.go)",
       "Bash(./test_charts.sh:*)",
       "Bash(fuser:*)",
-      "Bash(./build.sh)"
+      "Bash(./build.sh)",
+      "Bash(find:*)",
+      "Bash(go build:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }

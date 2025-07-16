@@ -770,10 +770,10 @@ func (h *Handlers) GetChartData(c *gin.Context) {
 		}
 		
 		// Filter by date range using proper column name
-		query = query.Where("sample_datetime >= ?", startDate)
+		query = query.Where("sample_date_time >= ?", startDate)
 		
 		// Order by date
-		query = query.Order("sample_datetime ASC")
+		query = query.Order("sample_date_time ASC")
 		
 		var samples []models.Sample
 		if err := query.Find(&samples).Error; err != nil {
@@ -798,13 +798,13 @@ func (h *Handlers) GetChartData(c *gin.Context) {
 	
 	// Add date range filter if provided
 	if startDate := c.Query("start_date"); startDate != "" {
-		query = query.Where("sample_datetime >= ?", startDate)
+		query = query.Where("sample_date_time >= ?", startDate)
 	}
 	if endDate := c.Query("end_date"); endDate != "" {
-		query = query.Where("sample_datetime <= ?", endDate)
+		query = query.Where("sample_date_time <= ?", endDate)
 	}
 	
-	if err := query.Order("sample_datetime ASC").Find(&samples).Error; err != nil {
+	if err := query.Order("sample_date_time ASC").Find(&samples).Error; err != nil {
 		fmt.Printf("DEBUG: Chart query error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch chart data"})
 		return
