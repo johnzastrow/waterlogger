@@ -249,6 +249,175 @@ app:
   secret_key: "your-secret-key-change-this"
 ```
 
+### Server Configuration
+
+#### Changing the Port
+
+To change the port the application listens on, modify the `server.port` value in your `config.yaml` file:
+
+```yaml
+server:
+  port: 8080  # Change from default 2342 to 8080
+  host: "localhost"
+```
+
+After making this change, restart the application. The web interface will be available at `http://localhost:8080` (or whatever port you specified).
+
+#### Changing the Host
+
+To configure which hosts the application will accept connections from, modify the `server.host` value:
+
+**For localhost only (default - most secure):**
+```yaml
+server:
+  host: "localhost"  # Only accepts connections from localhost/127.0.0.1
+```
+
+**For all network interfaces (allows remote connections):**
+```yaml
+server:
+  host: "0.0.0.0"  # Accepts connections from any IP address
+```
+
+**For specific network interface:**
+```yaml
+server:
+  host: "192.168.1.100"  # Only accepts connections to this specific IP
+```
+
+⚠️ **Security Warning**: Setting `host: "0.0.0.0"` allows connections from any IP address that can reach your server. Only use this setting if you understand the security implications and have proper firewall rules in place.
+
+#### Complete Example
+
+```yaml
+server:
+  port: 8080
+  host: "0.0.0.0"  # Accept connections from any IP on port 8080
+```
+
+### Production Mode and Logging
+
+#### Running in Production Mode
+
+For production deployments, you should configure the application to run in production mode, which provides better performance and security:
+
+**Method 1: Using Configuration File**
+
+Set the `app.name` field to `"production"` in your `config.yaml`:
+
+```yaml
+app:
+  name: "production"  # Enables production mode
+  version: "1.0.0"
+  secret_key: "your-secret-key-change-this"
+```
+
+**Method 2: Using Environment Variable**
+
+Set the `GIN_MODE` environment variable to `release`:
+
+```bash
+# Linux/macOS
+export GIN_MODE=release
+./waterlogger
+
+# Windows
+set GIN_MODE=release
+waterlogger.exe
+```
+
+**Method 3: One-liner with Logging**
+
+```bash
+# Linux/macOS - Run in production mode with logging
+GIN_MODE=release ./waterlogger > /var/log/waterlogger.log 2>&1 &
+
+# Windows - Run in production mode with logging
+set GIN_MODE=release && waterlogger.exe > waterlogger.log 2>&1
+```
+
+#### Production Mode Benefits
+
+When running in production mode:
+- **Reduced Logging**: Less verbose output for better performance
+- **Better Performance**: Optimized middleware and request handling
+- **Security**: Debug routes and verbose error messages are disabled
+- **Cleaner Output**: Only essential information is logged
+
+#### Logging Configuration
+
+**Basic Logging to File:**
+
+```bash
+# Linux/macOS
+./waterlogger > /var/log/waterlogger.log 2>&1
+
+# Windows
+waterlogger.exe > waterlogger.log 2>&1
+```
+
+**Production Logging with Rotation:**
+
+For production environments, consider using log rotation:
+
+```bash
+# Linux with logrotate
+./waterlogger > /var/log/waterlogger.log 2>&1 &
+
+# Create /etc/logrotate.d/waterlogger:
+# /var/log/waterlogger.log {
+#     daily
+#     rotate 7
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0644 waterlogger waterlogger
+# }
+```
+
+**Debug Mode (Development Only):**
+
+For development and troubleshooting, you can enable debug mode:
+
+```bash
+# Linux/macOS
+GIN_MODE=debug ./waterlogger
+
+# Windows
+set GIN_MODE=debug
+waterlogger.exe
+```
+
+#### Systemd Service with Logging
+
+For Linux systems using systemd, create a service file that includes proper logging:
+
+```ini
+[Unit]
+Description=Waterlogger Service
+After=network.target
+
+[Service]
+Type=simple
+User=waterlogger
+WorkingDirectory=/opt/waterlogger
+Environment=GIN_MODE=release
+ExecStart=/opt/waterlogger/waterlogger -config /opt/waterlogger/config.yaml
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+View logs with:
+```bash
+sudo journalctl -u waterlogger -f
+```
+
 ### Command Line Options
 
 ```bash

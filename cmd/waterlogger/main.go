@@ -76,11 +76,17 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		log.Printf("Failed to load config: %v", err)
-		log.Println("Creating default configuration...")
-		cfg = config.Default()
-		if err := cfg.Save(configPath); err != nil {
-			log.Fatalf("Failed to save default config: %v", err)
+		if os.IsNotExist(err) {
+			// Config file doesn't exist, create default
+			log.Printf("Config file not found: %v", err)
+			log.Println("Creating default configuration...")
+			cfg = config.Default()
+			if err := cfg.Save(configPath); err != nil {
+				log.Fatalf("Failed to save default config: %v", err)
+			}
+		} else {
+			// Config file exists but has errors, don't overwrite
+			log.Fatalf("Failed to load config: %v", err)
 		}
 	}
 
