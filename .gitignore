@@ -34,10 +34,10 @@ ehthumbs.db
 Thumbs.db
 
 # Application specific
-waterlogger
+# waterlogger
 waterlogger.exe
 waterlogger-mac
-waterlogger.db
+# waterlogger.db
 config.yaml
 logs/
 *.log
