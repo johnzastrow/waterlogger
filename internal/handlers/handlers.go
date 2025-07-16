@@ -12,12 +12,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"waterlogger/internal/chemistry"
 	"waterlogger/internal/config"
 	"waterlogger/internal/middleware"
 	"waterlogger/internal/models"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Handlers struct {
@@ -776,6 +777,7 @@ func (h *Handlers) GetChartData(c *gin.Context) {
 		
 		var samples []models.Sample
 		if err := query.Find(&samples).Error; err != nil {
+			log.Printf("ChartData DB error: %v", err) // Add this line
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch chart data"})
 			return
 		}
