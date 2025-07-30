@@ -137,7 +137,7 @@ func (k *Kit) UnmarshalJSON(data []byte) error {
 type Sample struct {
 	BaseModel
 	PoolID         uint      `gorm:"not null" json:"pool_id"`
-	SampleDateTime time.Time `gorm:"not null" json:"sample_datetime"`
+	SampleDateTime time.Time `gorm:"column:sample_date_time;not null" json:"sample_datetime"`
 	UserID         uint      `gorm:"not null" json:"user_id"`
 	KitID          uint      `gorm:"not null" json:"kit_id"`
 	Notes          string    `gorm:"type:text" json:"notes"`

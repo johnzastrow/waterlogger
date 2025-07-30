@@ -18,7 +18,6 @@
                 <a href="/pools" class="navbar-item">Pools</a>
                 <a href="/kits" class="navbar-item">Test Kits</a>
                 <a href="/samples" class="navbar-item">Samples</a>
-                <a href="/charts" class="navbar-item">Charts</a>
                 <a href="/export" class="navbar-item">Export</a>
                 <a href="/settings" class="navbar-item">Settings</a>
                 <a href="#" class="navbar-item" onclick="logout()">Logout</a>
@@ -106,7 +105,6 @@
                 
                 <div class="form-group">
                     <label>
-                        <input type="checkbox" x-model="exportSettings.markdown.include_charts">
                         Include Chart Data
                     </label>
                 </div>
@@ -143,15 +141,15 @@
     <div class="export-history">
         <h3>Recent Exports</h3>
         <div class="export-list">
-            <template x-for="export in recentExports" :key="export.filename">
+            <template x-for="exportItem in (recentExports || [])" :key="exportItem.filename">
                 <div class="export-item">
-                    <span class="export-filename" x-text="export.filename"></span>
-                    <span class="export-date" x-text="formatDate(export.created_at)"></span>
-                    <span class="export-size" x-text="export.size"></span>
+                    <span class="export-filename" x-text="exportItem.filename"></span>
+                    <span class="export-date" x-text="formatDate(exportItem.created_at)"></span>
+                    <span class="export-size" x-text="exportItem.size"></span>
                 </div>
             </template>
             
-            <div x-show="recentExports.length === 0" class="empty-state">
+            <div x-show="recentExports && recentExports.length === 0" class="empty-state">
                 No exports yet
             </div>
         </div>
@@ -172,7 +170,6 @@
                     all_pools: true,
                     selected_pools: [],
                     date_range: 'all',
-                    include_charts: true
                 }
             },
             exporting: false,
@@ -229,10 +226,6 @@
                     
                     if (settings.date_range && settings.date_range !== 'all') {
                         params.append('days', settings.date_range);
-                    }
-                    
-                    if (settings.include_charts !== undefined) {
-                        params.append('include_charts', settings.include_charts);
                     }
                     
                     const fullUrl = params.toString() ? `${url}?${params.toString()}` : url;

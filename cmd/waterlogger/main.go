@@ -205,7 +205,6 @@ func setupRoutes(router *gin.Engine, h *handlers.Handlers) {
 	router.GET("/pools", h.PoolsPage)
 	router.GET("/kits", h.KitsPage)
 	router.GET("/samples", h.SamplesPage)
-	router.GET("/charts", h.ChartsPage)
 	router.GET("/export", h.ExportPage)
 	router.GET("/settings", h.SettingsPage)
 
@@ -236,8 +235,6 @@ func setupRoutes(router *gin.Engine, h *handlers.Handlers) {
 		api.PUT("/samples/:id", h.UpdateSample)
 		api.DELETE("/samples/:id", h.DeleteSample)
 
-		// Charts data
-		api.GET("/charts/data", h.GetChartData)
 
 		// Export
 		api.GET("/export", h.ExportBackup)
