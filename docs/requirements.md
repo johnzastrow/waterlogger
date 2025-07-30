@@ -653,3 +653,22 @@ Usage by model:
        claude-sonnet:  3.1k input, 388.3k output, 96.3m cache read, 5.3m cache write
 
 You can now use a Claude Pro subscription with Claude Code! https://claude.ai/upgrade then run /login.
+
+
+## Calculating how much chemical to add and in what order to correct water chemistry
+
+
+## Calculating how much water is in a pool or hot tub - calculating the volume
+
+1. Determine your pool volume
+The first and most critical step is to accurately determine the volume of water your pool holds, typically measured in gallons. 
+
+* For rectangular pools: Length × Width × Average Depth × 7.5 = Volume (gallons)
+* For round pools: 3.14 (π) × Radius × Radius × Average Depth × 7.5 = Volume (gallons)
+* For oval pools: 3.14 (π) × Length × Width × 0.25 × Average Depth × 7.5 = Volume (gallons)
+* For kidney-shaped pools: (A + B) × Length × 0.45 × Average Depth × 7.5 = Volume (gallons)
+
+Where "A" and "B" represent the two widest points of the kidney shape.
+
+For irregular shapes: Longest Length × Widest Width × Average Depth × 5.9 = Volume (gallons)Note: The number 7.5 represents the approximate number of gallons in one cubic foot of water. If your pool has varying depths, calculate the average depth by adding the shallowest and deepest depths and dividing by two. 
+
