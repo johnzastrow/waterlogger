@@ -28,7 +28,14 @@
       "Bash(done)",
       "Bash(go run:*)",
       "Bash(kill:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "WebFetch(domain:www.troublefreepool.com)",
+      "Bash(go mod:*)",
+      "Bash(./waterlogger)",
+      "Bash(./waterlogger:*)",
+      "Bash(wget:*)",
+      "Bash(bash:*)",
+      "Bash(dos2unix:*)"
     ],
     "deny": []
   }

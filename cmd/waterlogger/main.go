@@ -205,6 +205,7 @@ func setupRoutes(router *gin.Engine, h *handlers.Handlers) {
 	router.GET("/pools", h.PoolsPage)
 	router.GET("/kits", h.KitsPage)
 	router.GET("/samples", h.SamplesPage)
+	router.GET("/adjustments", h.AdjustmentsPage)
 	router.GET("/export", h.ExportPage)
 	router.GET("/settings", h.SettingsPage)
 
@@ -247,6 +248,17 @@ func setupRoutes(router *gin.Engine, h *handlers.Handlers) {
 		
 		// Unit conversion
 		api.POST("/convert", h.ConvertUnits)
+		
+		// Volume calculation
+		api.POST("/volume/calculate", h.CalculateVolume)
+		api.GET("/volume/info", h.GetVolumeInfo)
+		
+		// Chemical adjustments
+		api.POST("/adjustments/calculate", h.CalculateAdjustments)
+		api.GET("/adjustments/target-ranges", h.GetTargetRanges)
+		api.POST("/adjustments", h.SaveAdjustment)
+		api.GET("/adjustments", h.GetAdjustments)
+		api.GET("/adjustments/:id", h.GetAdjustment)
 	}
 
 	// 404 handler

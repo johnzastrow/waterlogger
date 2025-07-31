@@ -56,6 +56,7 @@ func NewDB(cfg *config.Config) (*DB, error) {
 		&models.Sample{},
 		&models.Measurements{},
 		&models.Indices{},
+		&models.Adjustment{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate schema: %w", err)
 	}

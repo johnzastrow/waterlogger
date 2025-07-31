@@ -693,3 +693,26 @@ For starting values (inputs) use the volume in the database for the selected poo
 The logic and calculations appear to be in the Javascript of the web page itself. Reproduce the logic and screen contents, but use the additional requirements above as well. Do not reproduce the pool volume part of the page as this is addressed by the previous feature.
 
 Also provide a 'Save Adjustments'  button on this screen. It should save a record with the following: date and time for the adjustment, notes from the user, all of the inputs (including starting and target values) and outputs (starting and target indices, recommended additions of each chemical). A new adjustment can be saved any time some value in the screen is changed.
+
+
+● Looking at the requirements for version 1.2, I can see two new features to implement:
+
+  1. Pool Volume Calculator - Add volume calculation capability to the pools screen based on shape and dimensions
+  2. Chemical Adjustment Recommendations - Create a dedicated screen to calculate what chemicals to add to achieve ideal water
+  chemistry
+
+  I have a few clarifying questions before implementing these features:
+
+  Pool Volume Calculator:
+  1. Should the shape and dimensions be stored as additional fields in the existing POOLS table, or would you prefer a separate
+  table for pool geometry? ANS: Use the existing POOLS table
+  2. For the kidney-shaped pool formula, should I provide input fields for both "A" and "B" widths, or simplify with just one
+  width field? ANS: both A and B widths, but be clear in the user interface when they are needed and when they are not.
+  3. Should the volume calculator be a modal/popup on the pools page, or a separate section on the pool edit form? ANS: Let's try a modal popup.
+
+  Chemical Adjustment Recommendations:
+  1. I need to read the chem_calcs.md file you mentioned - is this in the docs/ directory? ANS: Yes
+  2. For the "Save Adjustments" feature, should this create a new database table (like ADJUSTMENTS) to store the adjustment
+  records? ANS: Yes, the ADJUSTMENTS table will have many ADJUSTMENTS 
+  3. Should the adjustment records be linked to specific samples, or can they be standalone recommendations? ANS: They should link to the SAMPLE if the user does not change the STARTING inputs, which should be those values in the SAMPLE record
+  4. What are the ideal target ranges for LSI and RSI that the system should aim for? ANS: LSI Ideal Range  = -0.3 to +0.3, best value is 0.0. RSI Ideal range is 5.0 to 7.0, best value is 6.0

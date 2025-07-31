@@ -24,6 +24,7 @@ type BackupData struct {
 	Samples          []models.Sample        `json:"samples"`
 	Measurements     []models.Measurements  `json:"measurements"`
 	Indices          []models.Indices       `json:"indices"`
+	Adjustments      []models.Adjustment    `json:"adjustments"`
 }
 
 // DatabaseMigrator handles database migrations between SQLite and MariaDB
@@ -84,6 +85,11 @@ func (dm *DatabaseMigrator) CreateBackup(backupPath string) error {
 		return fmt.Errorf("failed to backup indices: %v", err)
 	}
 	
+	// Backup Adjustments
+	if err := dm.sourceDB.Find(&backup.Adjustments).Error; err != nil {
+		return fmt.Errorf("failed to backup adjustments: %v", err)
+	}
+	
 	// Create backup directory if it doesn't exist
 	if err := os.MkdirAll(filepath.Dir(backupPath), 0755); err != nil {
 		return fmt.Errorf("failed to create backup directory: %v", err)
@@ -102,8 +108,8 @@ func (dm *DatabaseMigrator) CreateBackup(backupPath string) error {
 		return fmt.Errorf("failed to write backup data: %v", err)
 	}
 	
-	log.Printf("Backup created successfully with %d users, %d pools, %d samples", 
-		len(backup.Users), len(backup.Pools), len(backup.Samples))
+	log.Printf("Backup created successfully with %d users, %d pools, %d samples, %d adjustments", 
+		len(backup.Users), len(backup.Pools), len(backup.Samples), len(backup.Adjustments))
 	
 	return nil
 }
@@ -133,6 +139,7 @@ func (dm *DatabaseMigrator) RestoreFromBackup(backupPath string) error {
 		&models.Sample{},
 		&models.Measurements{},
 		&models.Indices{},
+		&models.Adjustment{},
 	); err != nil {
 		return fmt.Errorf("failed to migrate target database schema: %v", err)
 	}
@@ -185,6 +192,13 @@ func (dm *DatabaseMigrator) RestoreFromBackup(backupPath string) error {
 	if len(backup.Indices) > 0 {
 		if err := dm.targetDB.Create(&backup.Indices).Error; err != nil {
 			return fmt.Errorf("failed to restore indices: %v", err)
+		}
+	}
+	
+	// 8. Adjustments (depends on Pools, optionally on Samples)
+	if len(backup.Adjustments) > 0 {
+		if err := dm.targetDB.Create(&backup.Adjustments).Error; err != nil {
+			return fmt.Errorf("failed to restore adjustments: %v", err)
 		}
 	}
 	

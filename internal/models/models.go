@@ -46,6 +46,15 @@ type Pool struct {
 	Type            string  `json:"type"` // pool, hot_tub
 	SystemDescription *string `json:"system_description,omitempty"`
 	
+	// Volume calculator fields
+	Shape           *string  `json:"shape,omitempty"`           // rectangular, round, oval, kidney, irregular
+	Length          *float64 `json:"length,omitempty"`          // inches
+	Width           *float64 `json:"width,omitempty"`           // inches
+	ShallowDepth    *float64 `json:"shallow_depth,omitempty"`   // inches
+	DeepDepth       *float64 `json:"deep_depth,omitempty"`      // inches
+	KidneyWidthA    *float64 `json:"kidney_width_a,omitempty"`  // inches (for kidney shape)
+	KidneyWidthB    *float64 `json:"kidney_width_b,omitempty"`  // inches (for kidney shape)
+	
 	// Relationships
 	Samples []Sample `gorm:"foreignKey:PoolID" json:"samples,omitempty"`
 }
@@ -290,6 +299,57 @@ type Indices struct {
 	LSI      *float64 `json:"lsi,omitempty"` // Langelier Saturation Index
 	RSI      *float64 `json:"rsi,omitempty"` // Ryznar Stability Index
 	Comment  *string  `json:"comment,omitempty"` // Notes about estimation/missing parameters
+}
+
+// Adjustment stores chemical adjustment recommendations
+type Adjustment struct {
+	BaseModel
+	SampleID *uint `json:"sample_id,omitempty"` // Optional link to sample if using sample data as starting values
+	PoolID   uint  `gorm:"not null" json:"pool_id"`
+	Notes    string `gorm:"type:text" json:"notes"`
+	
+	// Starting values (inputs)
+	StartingFC    float64  `json:"starting_fc"`    // Free Chlorine (ppm)
+	StartingPH    float64  `json:"starting_ph"`    // pH (0-14 scale)
+	StartingTA    float64  `json:"starting_ta"`    // Total Alkalinity (ppm)
+	StartingCH    float64  `json:"starting_ch"`    // Calcium Hardness (ppm)
+	StartingCYA   *float64 `json:"starting_cya,omitempty"`   // Cyanuric Acid (ppm)
+	StartingTemp  float64  `json:"starting_temp"`  // Temperature (°F)
+	StartingSalt  *float64 `json:"starting_salt,omitempty"`  // Salinity (ppm)
+	StartingTDS   *float64 `json:"starting_tds,omitempty"`   // Total Dissolved Solids (mg/l)
+	
+	// Target values
+	TargetFC      float64  `json:"target_fc"`      // Free Chlorine (ppm)
+	TargetPH      float64  `json:"target_ph"`      // pH (0-14 scale)
+	TargetTA      float64  `json:"target_ta"`      // Total Alkalinity (ppm)
+	TargetCH      float64  `json:"target_ch"`      // Calcium Hardness (ppm)
+	TargetCYA     *float64 `json:"target_cya,omitempty"`     // Cyanuric Acid (ppm)
+	TargetTemp    float64  `json:"target_temp"`    // Temperature (°F)
+	TargetSalt    *float64 `json:"target_salt,omitempty"`    // Salinity (ppm)
+	TargetTDS     *float64 `json:"target_tds,omitempty"`     // Total Dissolved Solids (mg/l)
+	
+	// Calculated indices
+	StartingLSI   *float64 `json:"starting_lsi,omitempty"`   // Starting Langelier Saturation Index
+	StartingRSI   *float64 `json:"starting_rsi,omitempty"`   // Starting Ryznar Stability Index
+	TargetLSI     *float64 `json:"target_lsi,omitempty"`     // Target Langelier Saturation Index
+	TargetRSI     *float64 `json:"target_rsi,omitempty"`     // Target Ryznar Stability Index
+	
+	// Chemical recommendations (amounts to add)
+	AddMuriaticAcid     *float64 `json:"add_muriatic_acid,omitempty"`     // fl oz
+	AddSodiumBisulfate  *float64 `json:"add_sodium_bisulfate,omitempty"`  // oz (weight)
+	AddSodaAsh          *float64 `json:"add_soda_ash,omitempty"`          // oz (weight)
+	AddBorax            *float64 `json:"add_borax,omitempty"`             // oz (weight)
+	AddSodiumBicarbonate *float64 `json:"add_sodium_bicarbonate,omitempty"` // oz (weight)
+	AddCalciumChloride  *float64 `json:"add_calcium_chloride,omitempty"`  // oz (weight)
+	AddBleach           *float64 `json:"add_bleach,omitempty"`            // fl oz
+	AddTrichlor         *float64 `json:"add_trichlor,omitempty"`          // oz (weight)
+	AddDichlor          *float64 `json:"add_dichlor,omitempty"`           // oz (weight)
+	AddCalHypo          *float64 `json:"add_cal_hypo,omitempty"`          // oz (weight)
+	AddSalt             *float64 `json:"add_salt,omitempty"`              // lbs
+	
+	// Relationships
+	Pool   *Pool   `gorm:"foreignKey:PoolID" json:"pool,omitempty"`
+	Sample *Sample `gorm:"foreignKey:SampleID" json:"sample,omitempty"`
 }
 
 // BeforeCreate hook to set audit fields

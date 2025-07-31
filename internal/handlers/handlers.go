@@ -12,10 +12,12 @@ import (
 	"strconv"
 	"time"
 
+	"waterlogger/internal/adjustments"
 	"waterlogger/internal/chemistry"
 	"waterlogger/internal/config"
 	"waterlogger/internal/middleware"
 	"waterlogger/internal/models"
+	"waterlogger/internal/volume"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -460,6 +462,14 @@ func (h *Handlers) ExportPage(c *gin.Context) {
 func (h *Handlers) SettingsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "settings.html", gin.H{
 		"title": "Settings - Waterlogger",
+		"BuildTime": c.MustGet("BuildTime"),
+		"BuildDate": c.MustGet("BuildDate"),
+	})
+}
+
+func (h *Handlers) AdjustmentsPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "adjustments.html", gin.H{
+		"title": "Chemical Adjustments - Waterlogger",
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -1097,4 +1107,160 @@ func (h *Handlers) ConvertUnits(c *gin.Context) {
 
 	converted := chemistry.ConvertMeasurement(req.Value, req.Parameter, fromSystem)
 	c.JSON(http.StatusOK, converted)
+}
+
+// Volume calculation endpoints
+func (h *Handlers) CalculateVolume(c *gin.Context) {
+	var req volume.VolumeCalculationRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate the request
+	if err := volume.ValidateVolumeRequest(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Calculate volume
+	result, err := volume.CalculateVolume(req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// Get volume calculation info (required fields and descriptions for each shape)
+func (h *Handlers) GetVolumeInfo(c *gin.Context) {
+	shape := c.Query("shape")
+	
+	if shape == "" {
+		// Return all shapes info
+		shapes := []string{"rectangular", "round", "oval", "kidney", "irregular"}
+		shapeInfo := make(map[string]interface{})
+		
+		for _, s := range shapes {
+			shapeInfo[s] = gin.H{
+				"required_fields": volume.GetShapeRequiredFields(s),
+				"descriptions":    volume.GetShapeDescription(s),
+			}
+		}
+		
+		c.JSON(http.StatusOK, gin.H{
+			"shapes": shapeInfo,
+		})
+		return
+	}
+	
+	// Return info for specific shape
+	c.JSON(http.StatusOK, gin.H{
+		"shape":           shape,
+		"required_fields": volume.GetShapeRequiredFields(shape),
+		"descriptions":    volume.GetShapeDescription(shape),
+	})
+}
+
+// Chemical adjustment endpoints
+func (h *Handlers) CalculateAdjustments(c *gin.Context) {
+	var req adjustments.ChemicalAdjustmentRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Calculate adjustments
+	result, err := adjustments.CalculateAdjustments(req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// Get target ranges for pool/hot tub parameters
+func (h *Handlers) GetTargetRanges(c *gin.Context) {
+	poolType := c.Query("pool_type")
+	if poolType == "" {
+		poolType = "pool"
+	}
+	
+	ranges := adjustments.GetTargetRanges(poolType)
+	c.JSON(http.StatusOK, gin.H{
+		"pool_type": poolType,
+		"ranges":    ranges,
+	})
+}
+
+// Save adjustment recommendation
+func (h *Handlers) SaveAdjustment(c *gin.Context) {
+	var adjustment models.Adjustment
+	
+	if err := c.ShouldBindJSON(&adjustment); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	// Set audit fields
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+	
+	if err := h.db.WithContext(ctx).Create(&adjustment).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save adjustment"})
+		return
+	}
+	
+	c.JSON(http.StatusCreated, adjustment)
+}
+
+// Get adjustments for a pool
+func (h *Handlers) GetAdjustments(c *gin.Context) {
+	poolID := c.Query("pool_id")
+	sampleID := c.Query("sample_id")
+	
+	var adjustments []models.Adjustment
+	query := h.db.Preload("Pool").Preload("Sample")
+	
+	if poolID != "" {
+		query = query.Where("pool_id = ?", poolID)
+	}
+	
+	if sampleID != "" {
+		query = query.Where("sample_id = ?", sampleID)
+	}
+	
+	// Order by creation date, newest first
+	if err := query.Order("created_at DESC").Find(&adjustments).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch adjustments"})
+		return
+	}
+	
+	c.JSON(http.StatusOK, adjustments)
+}
+
+// Get single adjustment by ID
+func (h *Handlers) GetAdjustment(c *gin.Context) {
+	id := c.Param("id")
+	
+	var adjustment models.Adjustment
+	if err := h.db.Preload("Pool").Preload("Sample").First(&adjustment, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Adjustment not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch adjustment"})
+		}
+		return
+	}
+	
+	c.JSON(http.StatusOK, adjustment)
 }

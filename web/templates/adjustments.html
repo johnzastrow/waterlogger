@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h1>Waterlogger</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-item">Dashboard</a>
+                <a href="/pools" class="navbar-item">Pools</a>
+                <a href="/kits" class="navbar-item">Test Kits</a>
+                <a href="/samples" class="navbar-item">Samples</a>
+                <a href="/adjustments" class="navbar-item active">Adjustments</a>
+                <a href="/export" class="navbar-item">Export</a>
+                <a href="/settings" class="navbar-item">Settings</a>
+                <a href="#" class="navbar-item" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <script src="/static/js/debug.js"></script>
+        <div class="adjustments-container" x-data="adjustmentsManager()">
+            <div class="page-header">
+                <h2>🧪 Chemical Adjustments Calculator</h2>
+                <p>Calculate recommended chemical additions to achieve ideal water balance</p>
+            </div>
+
+            <!-- Pool Selection -->
+            <div class="adjustment-section">
+                <h3>Pool Selection</h3>
+                <div class="pool-selector">
+                    <label for="selected_pool">Select Pool <span class="required">*</span></label>
+                    <select id="selected_pool" x-model="selectedPoolId" @change="loadPoolData()">
+                        <option value="">Choose a pool...</option>
+                        <template x-for="pool in pools" :key="pool.id">
+                            <option :value="pool.id" x-text="`${pool.name} (${pool.volume_gallons || 'No volume'} gallons)`"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <div x-show="selectedPool" class="pool-info">
+                    <div class="info-card">
+                        <h4 x-text="selectedPool?.name"></h4>
+                        <div class="pool-details">
+                            <span><strong>Volume:</strong> <span x-text="selectedPool?.volume_gallons || 'Not specified'"></span> gallons</span>
+                            <span><strong>Type:</strong> <span x-text="selectedPool?.type || 'Not specified'"></span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sample Data Loading -->
+            <div x-show="selectedPool" class="adjustment-section">
+                <h3>Starting Values</h3>
+                <div class="sample-loader">
+                    <div class="load-options">
+                        <button @click="loadLatestSample()" class="btn btn-secondary" :disabled="!selectedPool">
+                            Load Latest Sample
+                        </button>
+                        <span>or enter values manually</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calculator Form -->
+            <div x-show="selectedPool" class="calculator-form">
+                <div class="calculator-grid">
+                    <!-- Starting Values Column -->
+                    <div class="values-column">
+                        <h3>Current Readings</h3>
+                        <div class="form-group">
+                            <label for="starting_fc">Free Chlorine (ppm) <span class="required">*</span></label>
+                            <input type="number" id="starting_fc" x-model.number="starting.fc" step="0.1" min="0" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="starting_ph">pH <span class="required">*</span></label>
+                            <input type="number" id="starting_ph" x-model.number="starting.ph" step="0.1" min="6" max="9" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="starting_ta">Total Alkalinity (ppm) <span class="required">*</span></label>
+                            <input type="number" id="starting_ta" x-model.number="starting.ta" step="1" min="0" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="starting_ch">Calcium Hardness (ppm) <span class="required">*</span></label>
+                            <input type="number" id="starting_ch" x-model.number="starting.ch" step="1" min="0" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="starting_temp">Temperature (°F) <span class="required">*</span></label>
+                            <input type="number" id="starting_temp" x-model.number="starting.temp" step="0.1" min="32" max="120" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="starting_cya">Cyanuric Acid (ppm)</label>
+                            <input type="number" id="starting_cya" x-model.number="starting.cya" step="1" min="0" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="starting_salt">Salinity (ppm)</label>
+                            <input type="number" id="starting_salt" x-model.number="starting.salt" step="1" min="0" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="starting_tds">TDS (mg/L)</label>
+                            <input type="number" id="starting_tds" x-model.number="starting.tds" step="1" min="0" @input="calculateIndices()">
+                        </div>
+                    </div>
+
+                    <!-- Target Values Column -->
+                    <div class="values-column">
+                        <h3>Target Values</h3>
+                        <div class="target-presets">
+                            <button @click="setIdealTargets()" class="btn btn-sm btn-secondary">Set Ideal Targets</button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_fc">Free Chlorine (ppm) <span class="required">*</span></label>
+                            <input type="number" id="target_fc" x-model.number="target.fc" step="0.1" min="0" @input="calculateIndices()">
+                            <small class="range-hint" x-text="getRangeHint('fc')"></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_ph">pH <span class="required">*</span></label>
+                            <input type="number" id="target_ph" x-model.number="target.ph" step="0.1" min="6" max="9" @input="calculateIndices()">
+                            <small class="range-hint" x-text="getRangeHint('ph')"></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_ta">Total Alkalinity (ppm) <span class="required">*</span></label>
+                            <input type="number" id="target_ta" x-model.number="target.ta" step="1" min="0" @input="calculateIndices()">
+                            <small class="range-hint" x-text="getRangeHint('ta')"></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_ch">Calcium Hardness (ppm) <span class="required">*</span></label>
+                            <input type="number" id="target_ch" x-model.number="target.ch" step="1" min="0" @input="calculateIndices()">
+                            <small class="range-hint" x-text="getRangeHint('ch')"></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_temp">Temperature (°F) <span class="required">*</span></label>
+                            <input type="number" id="target_temp" x-model.number="target.temp" step="0.1" min="32" max="120" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_cya">Cyanuric Acid (ppm)</label>
+                            <input type="number" id="target_cya" x-model.number="target.cya" step="1" min="0" @input="calculateIndices()">
+                            <small class="range-hint" x-text="getRangeHint('cya')"></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_salt">Salinity (ppm)</label>
+                            <input type="number" id="target_salt" x-model.number="target.salt" step="1" min="0" @input="calculateIndices()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_tds">TDS (mg/L)</label>
+                            <input type="number" id="target_tds" x-model.number="target.tds" step="1" min="0" @input="calculateIndices()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indices Display -->
+                <div class="indices-display">
+                    <div class="indices-grid">
+                        <div class="index-card">
+                            <h4>Starting LSI</h4>
+                            <div class="index-value" :class="getLSIClass(calculatedIndices?.starting_lsi)" x-text="formatIndex(calculatedIndices?.starting_lsi)">--</div>
+                            <small x-text="getLSIStatus(calculatedIndices?.starting_lsi)"></small>
+                        </div>
+                        
+                        <div class="index-card">
+                            <h4>Target LSI</h4>
+                            <div class="index-value" :class="getLSIClass(calculatedIndices?.target_lsi)" x-text="formatIndex(calculatedIndices?.target_lsi)">--</div>
+                            <small x-text="getLSIStatus(calculatedIndices?.target_lsi)"></small>
+                        </div>
+                        
+                        <div class="index-card">
+                            <h4>Starting RSI</h4>
+                            <div class="index-value" :class="getRSIClass(calculatedIndices?.starting_rsi)" x-text="formatIndex(calculatedIndices?.starting_rsi)">--</div>
+                            <small x-text="getRSIStatus(calculatedIndices?.starting_rsi)"></small>
+                        </div>
+                        
+                        <div class="index-card">
+                            <h4>Target RSI</h4>
+                            <div class="index-value" :class="getRSIClass(calculatedIndices?.target_rsi)" x-text="formatIndex(calculatedIndices?.target_rsi)">--</div>
+                            <small x-text="getRSIStatus(calculatedIndices?.target_rsi)"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calculate Button -->
+                <div class="calculate-section">
+                    <button @click="calculateAdjustments()" class="btn btn-primary btn-large" :disabled="!canCalculate() || calculating">
+                        <span x-show="!calculating">Calculate Chemical Adjustments</span>
+                        <span x-show="calculating">Calculating...</span>
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div x-show="adjustmentResults" class="results-section">
+                    <h3>Recommended Chemical Additions</h3>
+                    
+                    <!-- Priority Order -->
+                    <div x-show="adjustmentResults?.priority?.length > 0" class="priority-section">
+                        <h4>Addition Order (Important!)</h4>
+                        <ol class="priority-list">
+                            <template x-for="step in adjustmentResults.priority" :key="step">
+                                <li x-text="step"></li>
+                            </template>
+                        </ol>
+                    </div>
+
+                    <!-- Chemical Amounts -->
+                    <div class="chemicals-grid">
+                        <template x-for="chemical in getChemicalAdditions()" :key="chemical.name">
+                            <div class="chemical-card" x-show="chemical.amount > 0">
+                                <h5 x-text="chemical.name"></h5>
+                                <div class="chemical-amount">
+                                    <strong x-text="formatAmount(chemical.amount)"></strong>
+                                    <span x-text="chemical.unit"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div x-show="adjustmentResults?.recommendations?.length > 0" class="recommendations-section">
+                        <h4>Important Notes</h4>
+                        <ul class="recommendations-list">
+                            <template x-for="rec in adjustmentResults.recommendations" :key="rec">
+                                <li x-text="rec"></li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <!-- Warnings -->
+                    <div x-show="adjustmentResults?.warnings?.length > 0" class="warnings-section">
+                        <h4>⚠️ Warnings</h4>
+                        <ul class="warnings-list">
+                            <template x-for="warning in adjustmentResults.warnings" :key="warning">
+                                <li x-text="warning"></li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <!-- Save Section -->
+                    <div class="save-section">
+                        <div class="form-group">
+                            <label for="adjustment_notes">Notes</label>
+                            <textarea id="adjustment_notes" x-model="adjustmentNotes" rows="3" placeholder="Add any notes about this adjustment recommendation..."></textarea>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button @click="saveAdjustment()" class="btn btn-success" :disabled="saving">
+                                <span x-show="!saving">Save Adjustment</span>
+                                <span x-show="saving">Saving...</span>
+                            </button>
+                            
+                            <button @click="printToPDF()" class="btn btn-primary" :disabled="!adjustmentResults">
+                                📄 Print to PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function adjustmentsManager() {
+            return {
+                // Data
+                pools: [],
+                selectedPoolId: '',
+                selectedPool: null,
+                targetRanges: {},
+                calculatedIndices: null,
+                adjustmentResults: null,
+                adjustmentNotes: '',
+                calculating: false,
+                saving: false,
+                
+                // Form data
+                starting: {
+                    fc: null,
+                    ph: null,
+                    ta: null,
+                    ch: null,
+                    temp: null,
+                    cya: null,
+                    salt: null,
+                    tds: null
+                },
+                target: {
+                    fc: null,
+                    ph: null,
+                    ta: null,
+                    ch: null,
+                    temp: null,
+                    cya: null,
+                    salt: null,
+                    tds: null
+                },
+                
+                async init() {
+                    await this.loadPools();
+                    this.loadFromURLParams();
+                },
+                
+                async loadPools() {
+                    const result = await WaterloggerHelpers.loadData('/api/pools', 'pools');
+                    if (result.success) {
+                        this.pools = result.data;
+                    }
+                },
+                
+                loadFromURLParams() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    
+                    // Pre-select pool if provided
+                    const poolId = urlParams.get('pool_id');
+                    if (poolId) {
+                        this.selectedPoolId = poolId;
+                        this.loadPoolData();
+                    }
+                    
+                    // Pre-populate starting values if provided
+                    const startingFields = ['fc', 'ph', 'ta', 'ch', 'temp', 'cya', 'salt', 'tds'];
+                    for (const field of startingFields) {
+                        const value = urlParams.get(`starting_${field}`);
+                        if (value && value !== '') {
+                            this.starting[field] = parseFloat(value);
+                        }
+                    }
+                    
+                    // Clear URL parameters to keep the URL clean
+                    if (urlParams.toString()) {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                },
+                
+                async loadPoolData() {
+                    if (!this.selectedPoolId) {
+                        this.selectedPool = null;
+                        return;
+                    }
+                    
+                    this.selectedPool = this.pools.find(p => p.id == this.selectedPoolId);
+                    
+                    // Load target ranges for this pool type
+                    await this.loadTargetRanges();
+                },
+                
+                async loadTargetRanges() {
+                    try {
+                        const poolType = this.selectedPool?.type || 'pool';
+                        const response = await fetch(`/api/adjustments/target-ranges?pool_type=${poolType}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.targetRanges = data.ranges;
+                        }
+                    } catch (error) {
+                        console.error('Failed to load target ranges:', error);
+                    }
+                },
+                
+                async loadLatestSample() {
+                    if (!this.selectedPoolId) return;
+                    
+                    try {
+                        const response = await fetch(`/api/samples?pool_id=${this.selectedPoolId}&limit=1`);
+                        if (response.ok) {
+                            const samples = await response.json();
+                            if (samples.length > 0) {
+                                const sample = samples[0];
+                                const measurements = sample.measurements;
+                                
+                                if (measurements) {
+                                    this.starting.fc = measurements.fc;
+                                    this.starting.ph = measurements.ph;
+                                    this.starting.ta = measurements.ta;
+                                    this.starting.ch = measurements.ch;
+                                    this.starting.temp = measurements.temperature;
+                                    this.starting.cya = measurements.cya;
+                                    this.starting.salt = measurements.salinity;
+                                    this.starting.tds = measurements.tds;
+                                    
+                                    this.calculateIndices();
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Failed to load latest sample:', error);
+                    }
+                },
+                
+                setIdealTargets() {
+                    if (!this.targetRanges) return;
+                    
+                    this.target.fc = this.targetRanges.fc?.ideal || 2.0;
+                    this.target.ph = this.targetRanges.ph?.ideal || 7.5;
+                    this.target.ta = this.targetRanges.ta?.ideal || 100;
+                    this.target.ch = this.targetRanges.ch?.ideal || 300;
+                    this.target.temp = this.starting.temp || 80; // Keep same temperature
+                    this.target.cya = this.targetRanges.cya?.ideal || 40;
+                    this.target.salt = this.starting.salt; // Keep same salinity
+                    this.target.tds = this.starting.tds; // Keep same TDS
+                    
+                    this.calculateIndices();
+                },
+                
+                getRangeHint(param) {
+                    const range = this.targetRanges[param];
+                    if (!range) return '';
+                    return `Ideal: ${range.ideal} (Range: ${range.min}-${range.max})`;
+                },
+                
+                async calculateIndices() {
+                    // This would typically call the API to calculate indices
+                    // For now, we'll calculate them when calculating adjustments
+                },
+                
+                canCalculate() {
+                    return this.selectedPool && 
+                           this.starting.fc !== null && this.starting.ph !== null && 
+                           this.starting.ta !== null && this.starting.ch !== null && 
+                           this.starting.temp !== null &&
+                           this.target.fc !== null && this.target.ph !== null && 
+                           this.target.ta !== null && this.target.ch !== null && 
+                           this.target.temp !== null;
+                },
+                
+                async calculateAdjustments() {
+                    if (!this.canCalculate()) return;
+                    
+                    this.calculating = true;
+                    
+                    const request = {
+                        pool_volume: this.selectedPool.volume_gallons,
+                        pool_type: this.selectedPool.type || 'pool',
+                        starting_fc: this.starting.fc,
+                        starting_ph: this.starting.ph,
+                        starting_ta: this.starting.ta,
+                        starting_ch: this.starting.ch,
+                        starting_temp: this.starting.temp,
+                        starting_cya: this.starting.cya,
+                        starting_salt: this.starting.salt,
+                        starting_tds: this.starting.tds,
+                        target_fc: this.target.fc,
+                        target_ph: this.target.ph,
+                        target_ta: this.target.ta,
+                        target_ch: this.target.ch,
+                        target_temp: this.target.temp,
+                        target_cya: this.target.cya,
+                        target_salt: this.target.salt,
+                        target_tds: this.target.tds
+                    };
+                    
+                    try {
+                        const response = await fetch('/api/adjustments/calculate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(request)
+                        });
+                        
+                        if (response.ok) {
+                            this.adjustmentResults = await response.json();
+                            this.calculatedIndices = {
+                                starting_lsi: this.adjustmentResults.starting_lsi,
+                                starting_rsi: this.adjustmentResults.starting_rsi,
+                                target_lsi: this.adjustmentResults.target_lsi,
+                                target_rsi: this.adjustmentResults.target_rsi
+                            };
+                        } else {
+                            const error = await response.json();
+                            alert('Calculation failed: ' + error.error);
+                        }
+                    } catch (error) {
+                        alert('Failed to calculate adjustments: ' + error.message);
+                    }
+                    
+                    this.calculating = false;
+                },
+                
+                getChemicalAdditions() {
+                    if (!this.adjustmentResults) return [];
+                    
+                    const chemicals = [
+                        { name: 'Muriatic Acid', amount: this.adjustmentResults.add_muriatic_acid, unit: 'fl oz' },
+                        { name: 'Sodium Bisulfate', amount: this.adjustmentResults.add_sodium_bisulfate, unit: 'oz (weight)' },
+                        { name: 'Soda Ash', amount: this.adjustmentResults.add_soda_ash, unit: 'oz (weight)' },
+                        { name: 'Borax', amount: this.adjustmentResults.add_borax, unit: 'oz (weight)' },
+                        { name: 'Sodium Bicarbonate', amount: this.adjustmentResults.add_sodium_bicarbonate, unit: 'oz (weight)' },
+                        { name: 'Calcium Chloride', amount: this.adjustmentResults.add_calcium_chloride, unit: 'oz (weight)' },
+                        { name: 'Liquid Bleach', amount: this.adjustmentResults.add_bleach, unit: 'fl oz' },
+                        { name: 'Trichlor', amount: this.adjustmentResults.add_trichlor, unit: 'oz (weight)' },
+                        { name: 'Dichlor', amount: this.adjustmentResults.add_dichlor, unit: 'oz (weight)' },
+                        { name: 'Cal-Hypo', amount: this.adjustmentResults.add_cal_hypo, unit: 'oz (weight)' },
+                        { name: 'Salt', amount: this.adjustmentResults.add_salt, unit: 'lbs' }
+                    ];
+                    
+                    return chemicals.filter(c => c.amount > 0);
+                },
+                
+                async saveAdjustment() {
+                    if (!this.adjustmentResults) return;
+                    
+                    this.saving = true;
+                    
+                    const adjustmentData = {
+                        pool_id: parseInt(this.selectedPoolId),
+                        notes: this.adjustmentNotes,
+                        starting_fc: this.starting.fc,
+                        starting_ph: this.starting.ph,
+                        starting_ta: this.starting.ta,
+                        starting_ch: this.starting.ch,
+                        starting_temp: this.starting.temp,
+                        starting_cya: this.starting.cya,
+                        starting_salt: this.starting.salt,
+                        starting_tds: this.starting.tds,
+                        target_fc: this.target.fc,
+                        target_ph: this.target.ph,
+                        target_ta: this.target.ta,
+                        target_ch: this.target.ch,
+                        target_temp: this.target.temp,
+                        target_cya: this.target.cya,
+                        target_salt: this.target.salt,
+                        target_tds: this.target.tds,
+                        starting_lsi: this.adjustmentResults.starting_lsi,
+                        starting_rsi: this.adjustmentResults.starting_rsi,
+                        target_lsi: this.adjustmentResults.target_lsi,
+                        target_rsi: this.adjustmentResults.target_rsi,
+                        add_muriatic_acid: this.adjustmentResults.add_muriatic_acid,
+                        add_sodium_bisulfate: this.adjustmentResults.add_sodium_bisulfate,
+                        add_soda_ash: this.adjustmentResults.add_soda_ash,
+                        add_borax: this.adjustmentResults.add_borax,
+                        add_sodium_bicarbonate: this.adjustmentResults.add_sodium_bicarbonate,
+                        add_calcium_chloride: this.adjustmentResults.add_calcium_chloride,
+                        add_bleach: this.adjustmentResults.add_bleach,
+                        add_trichlor: this.adjustmentResults.add_trichlor,
+                        add_dichlor: this.adjustmentResults.add_dichlor,
+                        add_cal_hypo: this.adjustmentResults.add_cal_hypo,
+                        add_salt: this.adjustmentResults.add_salt
+                    };
+                    
+                    try {
+                        const response = await fetch('/api/adjustments', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(adjustmentData)
+                        });
+                        
+                        if (response.ok) {
+                            alert('Adjustment saved successfully!');
+                            this.adjustmentNotes = '';
+                        } else {
+                            const error = await response.json();
+                            alert('Failed to save adjustment: ' + error.error);
+                        }
+                    } catch (error) {
+                        alert('Failed to save adjustment: ' + error.message);
+                    }
+                    
+                    this.saving = false;
+                },
+                
+                // Helper methods
+                formatIndex(value) {
+                    if (value === null || value === undefined) return '--';
+                    return value.toFixed(2);
+                },
+                
+                formatAmount(amount) {
+                    if (amount < 1) {
+                        return amount.toFixed(2);
+                    } else {
+                        return amount.toFixed(1);
+                    }
+                },
+                
+                getLSIClass(lsi) {
+                    if (lsi === null || lsi === undefined) return '';
+                    if (lsi < -0.3) return 'index-low';
+                    if (lsi > 0.3) return 'index-high';
+                    return 'index-good';
+                },
+                
+                getRSIClass(rsi) {
+                    if (rsi === null || rsi === undefined) return '';
+                    if (rsi < 5.5) return 'index-high';
+                    if (rsi > 7.0) return 'index-low';
+                    return 'index-good';
+                },
+                
+                getLSIStatus(lsi) {
+                    if (lsi === null || lsi === undefined) return '';
+                    if (lsi < -0.3) return 'Corrosive';
+                    if (lsi > 0.3) return 'Scaling';
+                    return 'Balanced';
+                },
+                
+                getRSIStatus(rsi) {
+                    if (rsi === null || rsi === undefined) return '';
+                    if (rsi < 5.5) return 'Scaling Tendency';
+                    if (rsi > 7.0) return 'Corrosive Tendency';
+                    return 'Stable';
+                },
+                
+                printToPDF() {
+                    if (!this.adjustmentResults) {
+                        alert('No adjustment results to print. Please calculate adjustments first.');
+                        return;
+                    }
+                    
+                    // Create a new window with the printable content
+                    const printWindow = window.open('', '_blank', 'width=800,height=600');
+                    const currentDate = new Date();
+                    const chemicals = this.getChemicalAdditions();
+                    
+                    const printContent = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Waterlogger Chemical Adjustment Report</title>
+                            <style>
+                                @media print {
+                                    @page { margin: 0.75in; }
+                                    body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
+                                }
+                                body { 
+                                    font-family: Arial, sans-serif; 
+                                    font-size: 12px; 
+                                    line-height: 1.4; 
+                                    max-width: 8.5in; 
+                                    margin: 0 auto; 
+                                    padding: 0.75in;
+                                }
+                                .header { text-align: center; margin-bottom: 30px; }
+                                .header h1 { font-size: 20px; color: #2c3e50; margin-bottom: 10px; }
+                                .header p { margin: 5px 0; color: #666; }
+                                .section { margin-bottom: 25px; page-break-inside: avoid; }
+                                .section h2 { font-size: 16px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-bottom: 15px; }
+                                .section h3 { font-size: 14px; color: #2c3e50; margin-bottom: 10px; }
+                                .indices-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+                                .index-item { background: #f8f9fa; padding: 10px; border-radius: 5px; }
+                                .index-label { font-weight: bold; }
+                                .index-value { font-size: 14px; margin: 5px 0; }
+                                .good { color: #27ae60; }
+                                .bad { color: #e74c3c; }
+                                .high { color: #f39c12; }
+                                .chemicals-list { list-style: none; padding: 0; }
+                                .chemical-item { background: #f8f9fa; margin: 8px 0; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; }
+                                .chemical-name { font-weight: bold; }
+                                .chemical-amount { color: #2980b9; font-weight: bold; }
+                                .priority-list { counter-reset: step-counter; list-style: none; padding: 0; }
+                                .priority-list li { counter-increment: step-counter; margin: 8px 0; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; }
+                                .priority-list li:before { content: counter(step-counter) ". "; font-weight: bold; color: #856404; }
+                                .info-section { background: #e8f4f8; padding: 15px; border-radius: 5px; margin: 15px 0; }
+                                .info-section h4 { color: #2c3e50; margin-top: 0; }
+                                .info-section ul { margin: 10px 0; }
+                                .info-section li { margin: 5px 0; }
+                                .warnings { background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; }
+                                .warnings h4 { color: #721c24; margin-top: 0; }
+                                .recommendations { background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 5px; padding: 15px; }
+                                .recommendations h4 { color: #0c5460; margin-top: 0; }
+                                .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 10px; color: #666; }
+                                @media print {
+                                    .no-print { display: none; }
+                                    .page-break { page-break-before: always; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h1>🧪 Waterlogger Chemical Adjustment Report</h1>
+                                <p>Generated: ${currentDate.toLocaleDateString()} at ${currentDate.toLocaleTimeString()}</p>
+                                ${this.selectedPool ? `<p><strong>Pool:</strong> ${this.selectedPool.name} (${this.selectedPool.volume_gallons || 'Unknown'} gallons)</p>` : ''}
+                            </div>
+
+                            <div class="section">
+                                <h2>Water Balance Indices</h2>
+                                <div class="indices-grid">
+                                    <div class="index-item">
+                                        <div class="index-label">Starting LSI</div>
+                                        <div class="index-value ${this.getLSIClass(this.adjustmentResults.starting_lsi)}">${this.formatIndex(this.adjustmentResults.starting_lsi)} (${this.getLSIStatus(this.adjustmentResults.starting_lsi)})</div>
+                                    </div>
+                                    <div class="index-item">
+                                        <div class="index-label">Target LSI</div>
+                                        <div class="index-value ${this.getLSIClass(this.adjustmentResults.target_lsi)}">${this.formatIndex(this.adjustmentResults.target_lsi)} (${this.getLSIStatus(this.adjustmentResults.target_lsi)})</div>
+                                    </div>
+                                    <div class="index-item">
+                                        <div class="index-label">Starting RSI</div>
+                                        <div class="index-value ${this.getRSIClass(this.adjustmentResults.starting_rsi)}">${this.formatIndex(this.adjustmentResults.starting_rsi)} (${this.getRSIStatus(this.adjustmentResults.starting_rsi)})</div>
+                                    </div>
+                                    <div class="index-item">
+                                        <div class="index-label">Target RSI</div>
+                                        <div class="index-value ${this.getRSIClass(this.adjustmentResults.target_rsi)}">${this.formatIndex(this.adjustmentResults.target_rsi)} (${this.getRSIStatus(this.adjustmentResults.target_rsi)})</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${chemicals.length > 0 ? `
+                            <div class="section">
+                                <h2>Recommended Chemical Additions</h2>
+                                <ul class="chemicals-list">
+                                    ${chemicals.map(chemical => `
+                                        <li class="chemical-item">
+                                            <span class="chemical-name">${chemical.name}</span>
+                                            <span class="chemical-amount">${this.formatAmount(chemical.amount)} ${chemical.unit}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+
+                            ${this.adjustmentResults.priority && this.adjustmentResults.priority.length > 0 ? `
+                            <div class="section">
+                                <h2>Addition Order (Critical!)</h2>
+                                <ol class="priority-list">
+                                    ${this.adjustmentResults.priority.map(step => `<li>${step}</li>`).join('')}
+                                </ol>
+                            </div>
+                            ` : ''}
+
+                            <div class="page-break"></div>
+
+                            <div class="section">
+                                <h2>Background Information</h2>
+                                
+                                <div class="info-section">
+                                    <h4>Water Balance Indices Explained</h4>
+                                    <p><strong>LSI (Langelier Saturation Index)</strong>: Measures water's tendency to precipitate or dissolve calcium carbonate.</p>
+                                    <ul>
+                                        <li>Ideal range: -0.3 to +0.3</li>
+                                        <li>Negative values indicate corrosive water that may damage pool surfaces and equipment</li>
+                                        <li>Positive values indicate scaling tendency that may cause cloudy water and calcium buildup</li>
+                                    </ul>
+                                    
+                                    <p><strong>RSI (Ryznar Stability Index)</strong>: Predicts the stability of water with regard to calcium carbonate.</p>
+                                    <ul>
+                                        <li>Ideal range: 5.5 to 7.0</li>
+                                        <li>Values below 5.5 indicate scaling tendency</li>
+                                        <li>Values above 7.0 indicate corrosive tendency</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-section">
+                                    <h4>Chemical Addition Guidelines</h4>
+                                    <ul>
+                                        <li>Always add chemicals in the recommended order to prevent chemical reactions</li>
+                                        <li>Add chemicals slowly and allow circulation between additions</li>
+                                        <li>Wait 4-6 hours between major chemical adjustments</li>
+                                        <li>Test water 24 hours after final addition to verify results</li>
+                                        <li>Pre-dissolve solid chemicals when possible to ensure even distribution</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-section">
+                                    <h4>Safety Reminders</h4>
+                                    <ul>
+                                        <li><strong>Never mix chemicals together</strong> - add them separately to the pool</li>
+                                        <li><strong>Always add acid to water, never water to acid</strong></li>
+                                        <li>Wear protective equipment when handling pool chemicals</li>
+                                        <li>Store chemicals in a cool, dry place away from direct sunlight</li>
+                                        <li>Keep chemical containers tightly sealed and properly labeled</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            ${this.adjustmentResults.recommendations && this.adjustmentResults.recommendations.length > 0 ? `
+                            <div class="section">
+                                <div class="recommendations">
+                                    <h4>Additional Recommendations</h4>
+                                    <ul>
+                                        ${this.adjustmentResults.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${this.adjustmentResults.warnings && this.adjustmentResults.warnings.length > 0 ? `
+                            <div class="section">
+                                <div class="warnings">
+                                    <h4>⚠️ Important Warnings</h4>
+                                    <ul>
+                                        ${this.adjustmentResults.warnings.map(warning => `<li>${warning}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${this.adjustmentNotes && this.adjustmentNotes.trim() ? `
+                            <div class="section">
+                                <h3>Notes</h3>
+                                <div class="info-section">
+                                    <p>${this.adjustmentNotes.replace(/\n/g, '<br>')}</p>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            <div class="footer">
+                                <p>Generated by Waterlogger - Pool Water Management System</p>
+                                <p class="no-print" style="margin-top: 20px;">
+                                    <button onclick="window.print()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">🖨️ Print to PDF</button>
+                                    <button onclick="window.close()" style="background: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; margin-left: 10px;">✕ Close</button>
+                                </p>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+                    
+                    printWindow.document.write(printContent);
+                    printWindow.document.close();
+                    
+                    // Wait for content to load, then trigger print dialog
+                    printWindow.onload = function() {
+                        setTimeout(() => {
+                            printWindow.focus();
+                            printWindow.print();
+                        }, 500);
+                    };
+                }
+            };
+        }
+        
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    </script>
+
+    <footer class="build-info">
+        <small>Built on {{.BuildDate}} at {{.BuildTime}}</small>
+    </footer>
+</body>
+</html>

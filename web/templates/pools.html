@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.title}}</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
@@ -56,6 +57,38 @@
                         <span class="detail-label">System:</span>
                         <span class="detail-value" x-text="pool.system_description"></span>
                     </div>
+                    
+                    <!-- Pool geometry display -->
+                    <div x-show="pool.shape" class="pool-geometry">
+                        <div class="detail-item">
+                            <span class="detail-label">Shape:</span>
+                            <span class="detail-value" x-text="formatShape(pool.shape)"></span>
+                        </div>
+                        <div class="detail-item" x-show="pool.length">
+                            <span class="detail-label">Length:</span>
+                            <span class="detail-value" x-text="pool.length + ' inches'"></span>
+                        </div>
+                        <div class="detail-item" x-show="pool.width">
+                            <span class="detail-label" x-text="pool.shape === 'round' ? 'Diameter:' : 'Width:'"></span>
+                            <span class="detail-value" x-text="pool.width + ' inches'"></span>
+                        </div>
+                        <div class="detail-item" x-show="pool.shallow_depth">
+                            <span class="detail-label">Shallow:</span>
+                            <span class="detail-value" x-text="pool.shallow_depth + ' inches'"></span>
+                        </div>
+                        <div class="detail-item" x-show="pool.deep_depth">
+                            <span class="detail-label">Deep:</span>
+                            <span class="detail-value" x-text="pool.deep_depth + ' inches'"></span>
+                        </div>
+                        <div class="detail-item" x-show="pool.kidney_width_a && pool.shape === 'kidney'">
+                            <span class="detail-label">Width A:</span>
+                            <span class="detail-value" x-text="pool.kidney_width_a + ' inches'"></span>
+                        </div>
+                        <div class="detail-item" x-show="pool.kidney_width_b && pool.shape === 'kidney'">
+                            <span class="detail-label">Width B:</span>
+                            <span class="detail-value" x-text="pool.kidney_width_b + ' inches'"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </template>
@@ -91,7 +124,10 @@
 
                 <div class="form-group">
                     <label for="volume_gallons">Volume (gallons)</label>
-                    <input type="number" id="volume_gallons" x-model.number="currentPool.volume_gallons" step="0.01">
+                    <div class="input-with-button">
+                        <input type="number" id="volume_gallons" x-model.number="currentPool.volume_gallons" step="0.01">
+                        <button type="button" @click="showVolumeCalculator = true" class="btn btn-sm btn-secondary">Calculate</button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -109,6 +145,107 @@
             </form>
         </div>
     </div>
+
+    <!-- Volume Calculator Modal -->
+    <div x-show="showVolumeCalculator" class="modal-overlay" @click="closeVolCalc()">
+        <div class="modal-content volume-calc-modal" @click.stop>
+            <div class="modal-header">
+                <h3>Pool Volume Calculator</h3>
+                <button @click="closeVolCalc()" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="volume-calc-content">
+                <div class="shape-selection">
+                    <label>Pool Shape <span class="required">*</span></label>
+                    <select x-model="volumeCalc.shape" @change="updateShapeFields()">
+                        <option value="">Select pool shape...</option>
+                        <option value="rectangular">Rectangular</option>
+                        <option value="round">Round</option>
+                        <option value="oval">Oval</option>
+                        <option value="kidney">Kidney-shaped</option>
+                        <option value="irregular">Irregular</option>
+                    </select>
+                </div>
+
+                <div x-show="volumeCalc.shape" class="dimension-inputs">
+                    <div class="dimensions-grid">
+                        <!-- Length (for all except round) -->
+                        <div x-show="volumeCalc.shape !== 'round'" class="form-group">
+                            <label x-text="getDimensionLabel('length')">Length (inches)</label>
+                            <input type="number" x-model.number="volumeCalc.length" step="0.1" min="0">
+                        </div>
+
+                        <!-- Width/Diameter -->
+                        <div class="form-group">
+                            <label x-text="getDimensionLabel('width')">Width (inches)</label>
+                            <input type="number" x-model.number="volumeCalc.width" step="0.1" min="0">
+                        </div>
+
+                        <!-- Kidney shape special fields -->
+                        <div x-show="volumeCalc.shape === 'kidney'" class="form-group">
+                            <label>Width A (inches)</label>
+                            <input type="number" x-model.number="volumeCalc.kidney_width_a" step="0.1" min="0">
+                            <small>First widest point of kidney shape</small>
+                        </div>
+
+                        <div x-show="volumeCalc.shape === 'kidney'" class="form-group">
+                            <label>Width B (inches)</label>
+                            <input type="number" x-model.number="volumeCalc.kidney_width_b" step="0.1" min="0">
+                            <small>Second widest point of kidney shape</small>
+                        </div>
+
+                        <!-- Depths -->
+                        <div class="form-group">
+                            <label>Shallow Depth (inches)</label>
+                            <input type="number" x-model.number="volumeCalc.shallow_depth" step="0.1" min="0">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Deep Depth (inches)</label>
+                            <input type="number" x-model.number="volumeCalc.deep_depth" step="0.1" min="0">
+                        </div>
+                    </div>
+
+                    <div class="calc-actions">
+                        <button type="button" @click="calculateVolume()" class="btn btn-primary" :disabled="!canCalculate()">
+                            Calculate Volume
+                        </button>
+                    </div>
+
+                    <!-- Results -->
+                    <div x-show="volumeResult" class="volume-result">
+                        <h4>Calculated Volume</h4>
+                        <div class="result-display">
+                            <div class="volume-value">
+                                <strong x-text="Math.round(volumeResult?.volume_gallons || 0)"></strong> gallons
+                            </div>
+                            <div class="formula-info">
+                                <div class="formula" x-text="volumeResult?.formula"></div>
+                                <div class="explanation" x-text="volumeResult?.explanation"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="result-actions">
+                            <button type="button" @click="useCalculatedVolume()" class="btn btn-success">
+                                Use This Volume
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-text">
+                    <p><strong>Instructions:</strong></p>
+                    <ul>
+                        <li>Select your pool shape from the dropdown</li>
+                        <li>Enter all dimensions in inches</li>
+                        <li>For varying depths, enter shallow and deep end measurements</li>
+                        <li x-show="volumeCalc.shape === 'kidney'">For kidney shapes, measure the two widest points (A and B)</li>
+                        <li x-show="volumeCalc.shape === 'irregular'">For irregular shapes, use the longest length and widest width</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -117,6 +254,7 @@
             pools: [],
             showAddModal: false,
             showEditModal: false,
+            showVolumeCalculator: false,
             loading: false,
             currentPool: {
                 id: null,
@@ -125,6 +263,16 @@
                 volume_gallons: null,
                 system_description: ''
             },
+            volumeCalc: {
+                shape: '',
+                length: null,
+                width: null,
+                shallow_depth: null,
+                deep_depth: null,
+                kidney_width_a: null,
+                kidney_width_b: null
+            },
+            volumeResult: null,
             
             async init() {
                 await this.loadPools();
@@ -201,6 +349,136 @@
                     volume_gallons: null,
                     system_description: ''
                 };
+            },
+
+            // Volume calculator methods
+            updateShapeFields() {
+                // Reset fields when shape changes
+                this.volumeCalc.length = null;
+                this.volumeCalc.width = null;
+                this.volumeCalc.shallow_depth = null;
+                this.volumeCalc.deep_depth = null;
+                this.volumeCalc.kidney_width_a = null;
+                this.volumeCalc.kidney_width_b = null;
+                this.volumeResult = null;
+            },
+
+            getDimensionLabel(dimension) {
+                const labels = {
+                    'round': {
+                        'width': 'Diameter (inches)'
+                    },
+                    'rectangular': {
+                        'length': 'Length (inches)',
+                        'width': 'Width (inches)'
+                    },
+                    'oval': {
+                        'length': 'Length (inches)',
+                        'width': 'Width (inches)'
+                    },
+                    'kidney': {
+                        'length': 'Length (inches)'
+                    },
+                    'irregular': {
+                        'length': 'Longest Length (inches)',
+                        'width': 'Widest Width (inches)'
+                    }
+                };
+
+                return labels[this.volumeCalc.shape]?.[dimension] || dimension.charAt(0).toUpperCase() + dimension.slice(1) + ' (inches)';
+            },
+
+            canCalculate() {
+                if (!this.volumeCalc.shape) return false;
+                
+                // Check required fields based on shape
+                const requiredFields = ['shallow_depth', 'deep_depth'];
+                
+                if (this.volumeCalc.shape !== 'round') {
+                    requiredFields.push('length');
+                }
+                
+                requiredFields.push('width');
+                
+                if (this.volumeCalc.shape === 'kidney') {
+                    requiredFields.push('kidney_width_a', 'kidney_width_b');
+                }
+
+                return requiredFields.every(field => 
+                    this.volumeCalc[field] !== null && 
+                    this.volumeCalc[field] !== undefined && 
+                    this.volumeCalc[field] > 0
+                );
+            },
+
+            async calculateVolume() {
+                if (!this.canCalculate()) {
+                    alert('Please fill in all required dimensions');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/volume/calculate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(this.volumeCalc)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to calculate volume');
+                    }
+
+                    this.volumeResult = await response.json();
+                } catch (error) {
+                    alert('Error calculating volume: ' + error.message);
+                    console.error('Volume calculation error:', error);
+                }
+            },
+
+            useCalculatedVolume() {
+                if (this.volumeResult) {
+                    this.currentPool.volume_gallons = Math.round(this.volumeResult.volume_gallons);
+                    
+                    // Store the shape and dimensions in the pool record
+                    this.currentPool.shape = this.volumeCalc.shape;
+                    this.currentPool.length = this.volumeCalc.length;
+                    this.currentPool.width = this.volumeCalc.width;
+                    this.currentPool.shallow_depth = this.volumeCalc.shallow_depth;
+                    this.currentPool.deep_depth = this.volumeCalc.deep_depth;
+                    this.currentPool.kidney_width_a = this.volumeCalc.kidney_width_a;
+                    this.currentPool.kidney_width_b = this.volumeCalc.kidney_width_b;
+                    
+                    this.closeVolCalc();
+                }
+            },
+
+            closeVolCalc() {
+                this.showVolumeCalculator = false;
+                this.volumeCalc = {
+                    shape: '',
+                    length: null,
+                    width: null,
+                    shallow_depth: null,
+                    deep_depth: null,
+                    kidney_width_a: null,
+                    kidney_width_b: null
+                };
+                this.volumeResult = null;
+            },
+
+            // Helper function to format shape names
+            formatShape(shape) {
+                const shapeNames = {
+                    'rectangular': 'Rectangular',
+                    'round': 'Round',
+                    'oval': 'Oval',
+                    'kidney': 'Kidney-shaped',
+                    'irregular': 'Irregular'
+                };
+                return shapeNames[shape] || shape;
             }
         };
     }

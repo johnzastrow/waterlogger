@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.title}}</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
@@ -43,6 +44,7 @@
                         <span class="sample-kit" x-show="sample.kit" x-text="'Test Kit: ' + sample.kit.name"></span>
                     </div>
                     <div class="sample-actions">
+                        <button @click="getRecommendedChanges(sample)" class="btn btn-sm btn-success" x-show="sample.measurements">Recommended Changes</button>
                         <button @click="editSample(sample)" class="btn btn-sm btn-secondary">Edit</button>
                         <button @click="deleteSample(sample.id)" class="btn btn-sm btn-danger">Delete</button>
                     </div>
@@ -375,6 +377,31 @@
                 } else {
                     alert(result.error);
                 }
+            },
+            
+            getRecommendedChanges(sample) {
+                if (!sample.measurements || !sample.pool) {
+                    alert('This sample needs measurements and pool information to calculate recommendations.');
+                    return;
+                }
+                
+                // Build the URL with sample data as query parameters
+                const params = new URLSearchParams({
+                    pool_id: sample.pool_id,
+                    sample_id: sample.id,
+                    // Pre-populate starting values from sample
+                    starting_fc: sample.measurements.fc || '',
+                    starting_ph: sample.measurements.ph || '',
+                    starting_ta: sample.measurements.ta || '',
+                    starting_ch: sample.measurements.ch || '',
+                    starting_temp: sample.measurements.temperature || '',
+                    starting_cya: sample.measurements.cya || '',
+                    starting_salt: sample.measurements.salinity || '',
+                    starting_tds: sample.measurements.tds || ''
+                });
+                
+                // Navigate to adjustments page with pre-populated data
+                window.location.href = `/adjustments?${params.toString()}`;
             },
             
             closeModal() {

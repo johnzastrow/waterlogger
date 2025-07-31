@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # Build script for Waterlogger with build timestamp
-# This script automatically injects the build date and time into the binary
-
 BUILD_TIME=$(date '+%H:%M:%S')
 BUILD_DATE=$(date '+%Y-%m-%d')
 
