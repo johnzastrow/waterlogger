@@ -141,6 +141,34 @@
                 </div>
             </div>
         </div>
+
+        <div class="dashboard-card">
+            <h3>Recent Adjustments</h3>
+            <p class="summary-subtitle">Last 10 Chemical Adjustments</p>
+            <div class="card-content">
+                <div class="dashboard-adjustments">
+                    <template x-for="adjustment in recentAdjustments" :key="adjustment.id">
+                        <div class="dashboard-adjustment-item">
+                            <div class="dashboard-adjustment-header">
+                                <span class="dashboard-adjustment-pool" x-text="adjustment.pool_name"></span>
+                                <span class="dashboard-adjustment-date" x-text="formatDate(adjustment.created_at)"></span>
+                            </div>
+                            <div class="dashboard-adjustment-summary">
+                                <template x-for="chemical in getAdjustmentSummary(adjustment)" :key="chemical">
+                                    <span class="chemical-tag" x-text="chemical"></span>
+                                </template>
+                                <div x-show="adjustment.notes && adjustment.notes.trim()" class="adjustment-notes-summary">
+                                    <em x-text="adjustment.notes.length > 50 ? adjustment.notes.substring(0, 50) + '...' : adjustment.notes"></em>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="recentAdjustments.length === 0" class="empty-state">
+                        No adjustments recorded yet. <a href="/adjustments">Make your first adjustment</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -150,12 +178,14 @@
             pools: [],
             recentSamples: [],
             poolsWithLatestSamples: [],
+            recentAdjustments: [],
             
             async init() {
                 console.log('Dashboard initializing...');
                 await this.loadPools();
                 await this.loadRecentSamples();
                 await this.loadPoolsWithLatestSamples();
+                await this.loadRecentAdjustments();
                 console.log('Dashboard initialization complete');
             },
             
@@ -286,6 +316,53 @@
                 
                 // Navigate to adjustments page with pre-populated data
                 window.location.href = `/adjustments?${params.toString()}`;
+            },
+            
+            async loadRecentAdjustments() {
+                try {
+                    const response = await fetch('/api/adjustments?limit=10');
+                    if (response.ok) {
+                        const adjustments = await response.json();
+                        
+                        // Add pool names to adjustments
+                        this.recentAdjustments = adjustments.map(adjustment => ({
+                            ...adjustment,
+                            pool_name: this.getPoolName(adjustment.pool_id)
+                        }));
+                    } else {
+                        console.error('Failed to load recent adjustments');
+                        this.recentAdjustments = [];
+                    }
+                } catch (error) {
+                    console.error('Error loading recent adjustments:', error);
+                    this.recentAdjustments = [];
+                }
+            },
+            
+            getPoolName(poolId) {
+                const pool = this.pools.find(p => p.id === poolId);
+                return pool ? pool.name : 'Unknown Pool';
+            },
+            
+            getAdjustmentSummary(adjustment) {
+                const chemicals = [
+                    { name: 'Muriatic Acid', amount: adjustment.add_muriatic_acid },
+                    { name: 'Sodium Bisulfate', amount: adjustment.add_sodium_bisulfate },
+                    { name: 'Soda Ash', amount: adjustment.add_soda_ash },
+                    { name: 'Borax', amount: adjustment.add_borax },
+                    { name: 'Sodium Bicarbonate', amount: adjustment.add_sodium_bicarbonate },
+                    { name: 'Calcium Chloride', amount: adjustment.add_calcium_chloride },
+                    { name: 'Liquid Bleach', amount: adjustment.add_bleach },
+                    { name: 'Trichlor', amount: adjustment.add_trichlor },
+                    { name: 'Dichlor', amount: adjustment.add_dichlor },
+                    { name: 'Cal-Hypo', amount: adjustment.add_cal_hypo },
+                    { name: 'Salt', amount: adjustment.add_salt }
+                ];
+                
+                return chemicals
+                    .filter(c => c.amount > 0)
+                    .map(c => c.name)
+                    .slice(0, 3); // Show only first 3 chemicals
             }
         };
     }

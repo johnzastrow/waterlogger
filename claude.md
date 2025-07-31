@@ -38,9 +38,14 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 ### POOLS Table
 - id (PRIMARY KEY)
 - name (UNIQUE, NOT NULL)
-- volume_gallons (DECIMAL)
+- volume_gallons (DECIMAL) - Calculated or manually entered volume
 - type (ENUM: 'pool', 'hot_tub')
 - system_description (TEXT)
+- shape (ENUM: 'rectangular', 'round', 'oval', 'kidney', 'l_shaped') - Pool shape for volume calculation
+- length, width, diameter (DECIMAL) - Pool dimensions in feet
+- shallow_depth, deep_depth (DECIMAL) - Pool depths in feet
+- has_steps, steps_width, steps_length, steps_depth (BOOLEAN/DECIMAL) - Step configuration
+- has_spa, spa_length, spa_width, spa_depth (DECIMAL) - Attached spa configuration
 - created_at, updated_at (NOT NULL)
 - created_by, updated_by (NOT NULL)
 
@@ -94,15 +99,32 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - unit_system (ENUM: 'imperial', 'metric', NOT NULL, DEFAULT 'imperial')
 - created_at, updated_at (NOT NULL)
 
+### ADJUSTMENTS Table
+- id (PRIMARY KEY)
+- pool_id (FOREIGN KEY to POOLS, NOT NULL)
+- sample_id (FOREIGN KEY to SAMPLES) - Optional reference to originating sample
+- starting_fc, starting_ph, starting_ta, starting_ch, starting_temp (DECIMAL, NOT NULL) - Starting water conditions
+- starting_cya, starting_salt, starting_tds (DECIMAL) - Optional starting parameters
+- target_fc, target_ph, target_ta, target_ch, target_temp (DECIMAL, NOT NULL) - Target water conditions
+- target_cya, target_salt, target_tds (DECIMAL) - Optional target parameters
+- starting_lsi, starting_rsi, target_lsi, target_rsi (DECIMAL) - Water balance indices
+- add_muriatic_acid, add_sodium_bisulfate, add_soda_ash, add_borax (DECIMAL) - Chemical additions in fluid ounces
+- add_sodium_bicarbonate, add_calcium_chloride, add_bleach, add_trichlor (DECIMAL) - Chemical additions in fluid ounces
+- add_dichlor, add_cal_hypo, add_salt (DECIMAL) - Chemical additions in fluid ounces/pounds
+- notes (TEXT) - User notes about the adjustment
+- created_at, updated_at (NOT NULL)
+- created_by, updated_by (NOT NULL)
+
 ## Features Required
 
 ### Core CRUD Operations
 - Users: Create, Read, Update, Delete user accounts
-- Pools: Manage multiple pools with specifications
+- Pools: Manage multiple pools with specifications and volume calculations
 - Test Kits: Track testing equipment and supplies
 - Samples: Log water testing sessions
 - Measurements: Record all water chemistry parameters
 - Indices: Auto-calculate and display water balance indices
+- Adjustments: Chemical dosing recommendations and application tracking
 
 ### Data Visualization
 - Line charts showing parameter trends over time
@@ -110,8 +132,17 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - Date range filtering and zoom capabilities
 
 ### Export Functionality
-- **Excel Export**: Separate worksheets for each entity
-- **Markdown Reports**: Structured reports with data tables sorted by date
+- **Excel Export**: Separate worksheets for each entity (users, pools, kits, samples, measurements, indices, adjustments)
+- **Markdown Reports**: Structured reports with data tables sorted by date, including comprehensive adjustment details
+- **JSON Backup**: Complete database backup with all tables and relationships for data migration
+- **PDF Generation**: Browser-based PDF export for adjustment details with professional formatting
+
+### Advanced Features (Version 1.2+)
+- **Pool Volume Calculator**: Comprehensive volume calculation system supporting multiple pool shapes (rectangular, round, oval, kidney, L-shaped) with varying depths, steps, and attached spas
+- **Chemical Adjustment System**: Professional water balance calculations with LSI/RSI indices and precise chemical dosing recommendations for 11 different pool chemicals
+- **Adjustment History**: Complete tracking of chemical adjustments with before/after conditions, chemical additions, and user notes
+- **Water Balance Analysis**: Real-time LSI/RSI calculations with color-coded indicators for optimal water balance
+- **Dashboard Analytics**: Quick overview of recent samples, water quality status, and recent adjustments across all pools
 
 ### User Interface Requirements
 - Dark navy navigation background
@@ -119,6 +150,9 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - Hover tooltips with detailed descriptions
 - Responsive design for mobile and desktop
 - Modern, clean appearance
+- Professional favicon integration
+- Color-coded water quality indicators
+- Mobile-optimized forms and displays
 
 ## Implementation Plan
 
@@ -291,21 +325,59 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - Testing framework setup
 
 ### Implementation Complete ✓
-- [To be updated during development]
+
+#### Version 1.0 Core Features
+- ✅ User authentication and management system
+- ✅ Pool management with CRUD operations
+- ✅ Test kit tracking and management
+- ✅ Water sample recording and tracking
+- ✅ Water chemistry measurements
+- ✅ LSI/RSI water balance calculations
+- ✅ Data visualization with Chart.js
+- ✅ Excel export functionality
+- ✅ Markdown export functionality
+- ✅ SQLite database with GORM ORM
+- ✅ Responsive web interface
+- ✅ Build system with timestamp injection
+
+#### Version 1.2 Advanced Features
+- ✅ Pool volume calculator with multiple shapes
+- ✅ Chemical adjustment recommendation system
+- ✅ Water balance analysis (LSI/RSI) with color indicators
+- ✅ Adjustment history tracking and display
+- ✅ PDF export for adjustment details
+- ✅ Enhanced dashboard with recent adjustments
+- ✅ Comprehensive backup export (JSON)
+- ✅ Professional favicon integration
+- ✅ Mobile-optimized responsive design
 
 ### Issues Fixed During Development
 - **User Management**: Implemented comprehensive user CRUD operations with modal-based interface
-- **Build Timestamps**: Added build date/time injection and display across all pages
+- **Build Timestamps**: Added build date/time injection and display across all pages (fixed "Built on unknown at unknown" issue)
 - **Navigation**: Updated all template files with user management links
 - **Authentication**: Enhanced password validation and security measures
 - **Responsive Design**: Improved mobile compatibility across all pages
+- **PDF Generation**: Fixed jsPDF library loading issues by switching to browser-based print functionality
+- **Build Script**: Resolved Windows line ending issues causing bash execution errors
+- **Favicon Integration**: Professional branding implementation across all HTML templates
 
-### Recent Updates (Latest Session)
+### Recent Updates (Latest Sessions)
+
+#### Version 1.2 Implementation (Previous Sessions)
 - **User Management System**: Complete implementation with create, edit, delete functionality
 - **Build Timestamp Integration**: All pages now display build date/time in bottom-right corner
 - **CSS Enhancements**: Added styling for user management interface and build timestamp
 - **Template Updates**: Updated all 10 HTML templates with user management navigation and build timestamps
 - **Build Process**: Created automated build script with timestamp injection
+
+#### Version 1.2 Features (Current Session)
+- **Pool Volume Calculator**: Comprehensive volume calculation system with support for rectangular, round, oval, kidney, and L-shaped pools with varying depths
+- **Chemical Adjustment System**: Professional-grade water balance calculations with LSI/RSI indices and chemical dosing recommendations
+- **PDF Export for Adjustments**: Browser-based PDF generation with comprehensive adjustment details, chemical safety guidelines, and water balance explanations
+- **Favicon Integration**: Professional branding with favicon.ico across all pages
+- **Adjustment History Tracking**: Past adjustments display on both adjustments screen (pool-filtered) and dashboard (last 10 across all pools)
+- **Enhanced Markdown Export**: Complete adjustments section with starting/target conditions, water balance indices, and chemical recommendations
+- **Full Backup Export Update**: All new data tables included in JSON backup exports (user preferences, measurements, indices, adjustments)
 
 ## Notes
 

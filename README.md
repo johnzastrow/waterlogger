@@ -4,15 +4,26 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 
 ## Features
 
-- **Multi-User Support**: Multiple users can manage water testing data with full CRUD operations
+### Core Functionality
+- **Multi-User Support**: Multiple users can manage water testing data with full authentication
 - **User Management**: Complete user administration with create, edit, and delete capabilities
 - **Pool Management**: Track multiple pools and hot tubs with detailed specifications
 - **Test Kit Management**: Organize and track testing equipment and supplies
 - **Water Chemistry**: Record comprehensive water parameter measurements
 - **Automatic Calculations**: LSI (Langelier Saturation Index) and RSI (Ryznar Stability Index) calculations
 - **Data Visualization**: Interactive charts showing parameter trends over time
-- **Export Functionality**: Export data to Excel and Markdown formats
-- **Responsive Design**: Mobile-friendly interface with modern UI
+
+### Advanced Features (Version 1.2+)
+- **Pool Volume Calculator**: Comprehensive volume calculation system supporting rectangular, round, oval, kidney, and L-shaped pools with varying depths, steps, and attached spas
+- **Chemical Adjustment System**: Professional-grade water balance calculations with precise chemical dosing recommendations for 11 different pool chemicals
+- **Water Balance Analysis**: Real-time LSI/RSI calculations with color-coded indicators for optimal water balance
+- **Adjustment History**: Complete tracking of chemical adjustments with before/after conditions and user notes
+- **PDF Export**: Professional PDF generation for adjustment details with safety guidelines and water balance explanations
+- **Dashboard Analytics**: Quick overview of recent samples, water quality status, and recent adjustments across all pools
+
+### Technical Features
+- **Export Functionality**: Export data to Excel, Markdown, and JSON backup formats
+- **Responsive Design**: Mobile-friendly interface with modern UI and professional favicon
 - **Database Flexibility**: Support for SQLite and MariaDB databases
 - **Cross-Platform**: Single executable for Windows and Linux
 - **Build Timestamps**: Each build includes deployment tracking in the UI
@@ -245,7 +256,7 @@ database:
 
 app:
   name: "Waterlogger"
-  version: "1.0.0"
+  version: "1.2.0"
   secret_key: "your-secret-key-change-this"
 ```
 
@@ -506,12 +517,14 @@ The application tracks the following water chemistry parameters:
 
 ### Data Export
 
-Export your data in two formats:
+Export your data in multiple formats:
 
-1. **Excel Export**: Multi-worksheet file with separate sheets for each data type
-2. **Markdown Export**: Structured text report with tables and summaries
+1. **Excel Export**: Multi-worksheet file with separate sheets for each data type (users, pools, kits, samples, measurements, indices, adjustments)
+2. **Markdown Export**: Structured text report with tables, summaries, and comprehensive adjustment details
+3. **JSON Backup**: Complete database backup with all tables and relationships for migration purposes
+4. **PDF Export**: Professional adjustment reports with chemical safety guidelines and water balance explanations
 
-Files are named with format: `WL[timestamp].xlsx` or `WL[timestamp].md`
+Files are named with format: `WL[timestamp].xlsx`, `WL[timestamp].md`, or `WL_backup_[timestamp].json`
 
 ## API Documentation
 
@@ -545,12 +558,18 @@ Files are named with format: `WL[timestamp].xlsx` or `WL[timestamp].md`
 - `PUT /api/samples/:id` - Update sample
 - `DELETE /api/samples/:id` - Delete sample
 
+#### Adjustments
+- `GET /api/adjustments` - List chemical adjustments (supports ?pool_id= and ?limit= parameters)
+- `POST /api/adjustments` - Create new chemical adjustment
+- `GET /api/adjustments/:id` - Get specific adjustment details
+
 #### Charts
 - `GET /api/charts/data` - Get chart data for visualization
 
 #### Export
 - `GET /api/export/excel` - Export data to Excel
 - `GET /api/export/markdown` - Export data to Markdown
+- `GET /api/export/backup` - Export complete database backup (JSON)
 
 #### Settings
 - `GET /api/settings` - Get user settings
@@ -655,6 +674,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Web framework: [Gin](https://gin-gonic.com/)
 
 ## Changelog
+
+### Version 1.2.0
+- **Pool Volume Calculator**: Comprehensive volume calculation system supporting multiple pool shapes (rectangular, round, oval, kidney, L-shaped) with varying depths, steps, and attached spas
+- **Chemical Adjustment System**: Professional-grade water balance calculations with LSI/RSI indices and precise chemical dosing recommendations for 11 different pool chemicals
+- **Adjustment History**: Complete tracking of chemical adjustments with before/after conditions, chemical additions, and user notes
+- **PDF Export**: Browser-based PDF generation for adjustment details with comprehensive safety guidelines and water balance explanations
+- **Enhanced Dashboard**: Recent adjustments display showing last 10 chemical adjustments across all pools
+- **Water Balance Analysis**: Real-time LSI/RSI calculations with color-coded indicators for optimal water balance
+- **JSON Backup Export**: Complete database backup functionality with all tables and relationships
+- **Professional Favicon**: Branded favicon integration across all pages
+- **Enhanced Markdown Export**: Comprehensive adjustment details included in markdown reports
+- Bug fixes: Build timestamp display, PDF generation, favicon integration
 
 ### Version 1.0.0
 - Initial release

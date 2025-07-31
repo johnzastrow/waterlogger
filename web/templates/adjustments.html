@@ -276,6 +276,54 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Past Adjustments History -->
+                <div x-show="selectedPool" class="past-adjustments-section">
+                    <h3>Past Adjustments for <span x-text="selectedPool?.name"></span></h3>
+                    
+                    <div x-show="pastAdjustments.length === 0" class="empty-state">
+                        No past adjustments found for this pool.
+                    </div>
+                    
+                    <div x-show="pastAdjustments.length > 0" class="adjustments-history">
+                        <template x-for="adjustment in pastAdjustments" :key="adjustment.id">
+                            <div class="adjustment-card">
+                                <div class="adjustment-header">
+                                    <div class="adjustment-date">
+                                        <span x-text="formatDate(adjustment.created_at)"></span>
+                                    </div>
+                                    <div class="adjustment-indices">
+                                        <span class="index-display">
+                                            LSI: <span :class="getLSIClass(adjustment.target_lsi)" x-text="formatIndex(adjustment.target_lsi)"></span>
+                                        </span>
+                                        <span class="index-display">
+                                            RSI: <span :class="getRSIClass(adjustment.target_rsi)" x-text="formatIndex(adjustment.target_rsi)"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="adjustment-content">
+                                    <div class="adjustment-chemicals" x-show="hasChemicals(adjustment)">
+                                        <h5>Chemicals Added:</h5>
+                                        <div class="chemical-tags">
+                                            <template x-for="chemical in getAdjustmentChemicals(adjustment)" :key="chemical.name">
+                                                <span class="chemical-tag">
+                                                    <span x-text="chemical.name"></span>: 
+                                                    <strong x-text="formatAmount(chemical.amount)"></strong> 
+                                                    <span x-text="chemical.unit"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    
+                                    <div x-show="adjustment.notes && adjustment.notes.trim()" class="adjustment-notes">
+                                        <strong>Notes:</strong> <span x-text="adjustment.notes"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -293,6 +341,7 @@
                 adjustmentNotes: '',
                 calculating: false,
                 saving: false,
+                pastAdjustments: [],
                 
                 // Form data
                 starting: {
@@ -356,6 +405,7 @@
                 async loadPoolData() {
                     if (!this.selectedPoolId) {
                         this.selectedPool = null;
+                        this.pastAdjustments = [];
                         return;
                     }
                     
@@ -363,6 +413,9 @@
                     
                     // Load target ranges for this pool type
                     await this.loadTargetRanges();
+                    
+                    // Load past adjustments for this pool
+                    await this.loadPastAdjustments();
                 },
                 
                 async loadTargetRanges() {
@@ -622,6 +675,55 @@
                     if (rsi < 5.5) return 'Scaling Tendency';
                     if (rsi > 7.0) return 'Corrosive Tendency';
                     return 'Stable';
+                },
+                
+                async loadPastAdjustments() {
+                    if (!this.selectedPoolId) {
+                        this.pastAdjustments = [];
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`/api/adjustments?pool_id=${this.selectedPoolId}`);
+                        if (response.ok) {
+                            const adjustments = await response.json();
+                            // Sort by date, newest first
+                            this.pastAdjustments = adjustments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                        } else {
+                            console.error('Failed to load past adjustments');
+                            this.pastAdjustments = [];
+                        }
+                    } catch (error) {
+                        console.error('Error loading past adjustments:', error);
+                        this.pastAdjustments = [];
+                    }
+                },
+                
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                },
+                
+                hasChemicals(adjustment) {
+                    return this.getAdjustmentChemicals(adjustment).length > 0;
+                },
+                
+                getAdjustmentChemicals(adjustment) {
+                    const chemicals = [
+                        { name: 'Muriatic Acid', amount: adjustment.add_muriatic_acid, unit: 'fl oz' },
+                        { name: 'Sodium Bisulfate', amount: adjustment.add_sodium_bisulfate, unit: 'oz (weight)' },
+                        { name: 'Soda Ash', amount: adjustment.add_soda_ash, unit: 'oz (weight)' },
+                        { name: 'Borax', amount: adjustment.add_borax, unit: 'oz (weight)' },
+                        { name: 'Sodium Bicarbonate', amount: adjustment.add_sodium_bicarbonate, unit: 'oz (weight)' },
+                        { name: 'Calcium Chloride', amount: adjustment.add_calcium_chloride, unit: 'oz (weight)' },
+                        { name: 'Liquid Bleach', amount: adjustment.add_bleach, unit: 'fl oz' },
+                        { name: 'Trichlor', amount: adjustment.add_trichlor, unit: 'oz (weight)' },
+                        { name: 'Dichlor', amount: adjustment.add_dichlor, unit: 'oz (weight)' },
+                        { name: 'Cal-Hypo', amount: adjustment.add_cal_hypo, unit: 'oz (weight)' },
+                        { name: 'Salt', amount: adjustment.add_salt, unit: 'lbs' }
+                    ];
+                    
+                    return chemicals.filter(c => c.amount > 0);
                 },
                 
                 printToPDF() {

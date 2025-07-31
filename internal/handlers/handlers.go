@@ -827,38 +827,80 @@ func (h *Handlers) ExportExcel(c *gin.Context) {
 func (h *Handlers) ExportBackup(c *gin.Context) {
 	// Get all data for backup
 	var users []models.User
+	var userPreferences []models.UserPreferences
 	var pools []models.Pool
 	var kits []models.Kit
 	var samples []models.Sample
+	var measurements []models.Measurements
+	var indices []models.Indices
+	var adjustments []models.Adjustment
 	
+	// Fetch users
 	if err := h.db.Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
 	
+	// Fetch user preferences
+	if err := h.db.Find(&userPreferences).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user preferences"})
+		return
+	}
+	
+	// Fetch pools (with all new volume calculator fields)
 	if err := h.db.Find(&pools).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pools"})
 		return
 	}
 	
+	// Fetch kits
 	if err := h.db.Find(&kits).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch kits"})
 		return
 	}
 	
-	if err := h.db.Preload("Pool").Preload("Measurements").Preload("Indices").Find(&samples).Error; err != nil {
+	// Fetch samples with relationships
+	if err := h.db.Preload("Pool").Preload("User").Preload("Kit").Find(&samples).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch samples"})
 		return
 	}
 	
-	// Create backup data structure
+	// Fetch measurements
+	if err := h.db.Find(&measurements).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch measurements"})
+		return
+	}
+	
+	// Fetch indices
+	if err := h.db.Find(&indices).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch indices"})
+		return
+	}
+	
+	// Fetch adjustments with relationships
+	if err := h.db.Preload("Pool").Preload("Sample").Order("created_at DESC").Find(&adjustments).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch adjustments"})
+		return
+	}
+	
+	// Create backup data structure with all tables
 	backupData := map[string]interface{}{
-		"users": users,
-		"pools": pools,
-		"kits": kits,
-		"samples": samples,
-		"exported_at": time.Now().Format("2006-01-02 15:04:05"),
-		"version": "1.0.0",
+		"users":           users,
+		"user_preferences": userPreferences,
+		"pools":           pools,
+		"kits":            kits,
+		"samples":         samples,
+		"measurements":    measurements,
+		"indices":         indices,
+		"adjustments":     adjustments,
+		"exported_at":     time.Now().Format("2006-01-02 15:04:05"),
+		"version":         "1.2.0", // Updated version to reflect new features
+		"schema_info": map[string]interface{}{
+			"pools_volume_calculator": "Includes shape, dimensions, and volume calculation fields",
+			"adjustments_system":      "Complete chemical adjustment recommendations with LSI/RSI calculations",
+			"user_preferences":        "Unit system preferences and user-specific settings",
+			"water_balance_indices":   "LSI and RSI calculations for water balance tracking",
+		},
 	}
 	
 	// Generate JSON backup
@@ -885,6 +927,13 @@ func (h *Handlers) ExportMarkdown(c *gin.Context) {
 	var samples []models.Sample
 	if err := h.db.Preload("Pool").Preload("Measurements").Preload("Indices").Find(&samples).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch samples"})
+		return
+	}
+	
+	// Get adjustments with related data
+	var adjustments []models.Adjustment
+	if err := h.db.Preload("Pool").Preload("Sample").Order("created_at DESC").Find(&adjustments).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch adjustments"})
 		return
 	}
 	
@@ -951,6 +1000,138 @@ func (h *Handlers) ExportMarkdown(c *gin.Context) {
 			
 			mdContent += "---\n\n"
 		}
+	}
+	
+	// Add adjustments section
+	if len(adjustments) > 0 {
+		mdContent += fmt.Sprintf("## Chemical Adjustments (%d adjustments)\n\n", len(adjustments))
+		
+		for _, adjustment := range adjustments {
+			poolName := "Unknown Pool"
+			if adjustment.Pool != nil {
+				poolName = adjustment.Pool.Name
+			}
+			
+			mdContent += fmt.Sprintf("### %s - %s\n\n", poolName, adjustment.CreatedAt.Format("2006-01-02 15:04:05"))
+			
+			// Starting conditions
+			mdContent += "**Starting Water Conditions:**\n"
+			mdContent += fmt.Sprintf("- Free Chlorine: %.2f ppm\n", adjustment.StartingFC)
+			mdContent += fmt.Sprintf("- pH: %.2f\n", adjustment.StartingPH)
+			mdContent += fmt.Sprintf("- Total Alkalinity: %.2f ppm\n", adjustment.StartingTA)
+			mdContent += fmt.Sprintf("- Calcium Hardness: %.2f ppm\n", adjustment.StartingCH)
+			mdContent += fmt.Sprintf("- Temperature: %.1f°F\n", adjustment.StartingTemp)
+			if adjustment.StartingCYA != nil {
+				mdContent += fmt.Sprintf("- Cyanuric Acid: %.2f ppm\n", *adjustment.StartingCYA)
+			}
+			if adjustment.StartingSalt != nil {
+				mdContent += fmt.Sprintf("- Salinity: %.2f ppm\n", *adjustment.StartingSalt)
+			}
+			if adjustment.StartingTDS != nil {
+				mdContent += fmt.Sprintf("- TDS: %.2f mg/L\n", *adjustment.StartingTDS)
+			}
+			mdContent += "\n"
+			
+			// Target conditions
+			mdContent += "**Target Water Conditions:**\n"
+			mdContent += fmt.Sprintf("- Free Chlorine: %.2f ppm\n", adjustment.TargetFC)
+			mdContent += fmt.Sprintf("- pH: %.2f\n", adjustment.TargetPH)
+			mdContent += fmt.Sprintf("- Total Alkalinity: %.2f ppm\n", adjustment.TargetTA)
+			mdContent += fmt.Sprintf("- Calcium Hardness: %.2f ppm\n", adjustment.TargetCH)
+			mdContent += fmt.Sprintf("- Temperature: %.1f°F\n", adjustment.TargetTemp)
+			if adjustment.TargetCYA != nil {
+				mdContent += fmt.Sprintf("- Cyanuric Acid: %.2f ppm\n", *adjustment.TargetCYA)
+			}
+			if adjustment.TargetSalt != nil {
+				mdContent += fmt.Sprintf("- Salinity: %.2f ppm\n", *adjustment.TargetSalt)
+			}
+			if adjustment.TargetTDS != nil {
+				mdContent += fmt.Sprintf("- TDS: %.2f mg/L\n", *adjustment.TargetTDS)
+			}
+			mdContent += "\n"
+			
+			// Water balance indices
+			if adjustment.StartingLSI != nil || adjustment.StartingRSI != nil || adjustment.TargetLSI != nil || adjustment.TargetRSI != nil {
+				mdContent += "**Water Balance Indices:**\n"
+				if adjustment.StartingLSI != nil {
+					mdContent += fmt.Sprintf("- Starting LSI: %.2f\n", *adjustment.StartingLSI)
+				}
+				if adjustment.TargetLSI != nil {
+					mdContent += fmt.Sprintf("- Target LSI: %.2f\n", *adjustment.TargetLSI)
+				}
+				if adjustment.StartingRSI != nil {
+					mdContent += fmt.Sprintf("- Starting RSI: %.2f\n", *adjustment.StartingRSI)
+				}
+				if adjustment.TargetRSI != nil {
+					mdContent += fmt.Sprintf("- Target RSI: %.2f\n", *adjustment.TargetRSI)
+				}
+				mdContent += "\n"
+			}
+			
+			// Chemical additions
+			hasChemicals := false
+			chemicalsList := ""
+			
+			if adjustment.AddMuriaticAcid != nil && *adjustment.AddMuriaticAcid > 0 {
+				chemicalsList += fmt.Sprintf("- Muriatic Acid: %.2f fl oz\n", *adjustment.AddMuriaticAcid)
+				hasChemicals = true
+			}
+			if adjustment.AddSodiumBisulfate != nil && *adjustment.AddSodiumBisulfate > 0 {
+				chemicalsList += fmt.Sprintf("- Sodium Bisulfate: %.2f oz (weight)\n", *adjustment.AddSodiumBisulfate)
+				hasChemicals = true
+			}
+			if adjustment.AddSodaAsh != nil && *adjustment.AddSodaAsh > 0 {
+				chemicalsList += fmt.Sprintf("- Soda Ash: %.2f oz (weight)\n", *adjustment.AddSodaAsh)
+				hasChemicals = true
+			}
+			if adjustment.AddBorax != nil && *adjustment.AddBorax > 0 {
+				chemicalsList += fmt.Sprintf("- Borax: %.2f oz (weight)\n", *adjustment.AddBorax)
+				hasChemicals = true
+			}
+			if adjustment.AddSodiumBicarbonate != nil && *adjustment.AddSodiumBicarbonate > 0 {
+				chemicalsList += fmt.Sprintf("- Sodium Bicarbonate: %.2f oz (weight)\n", *adjustment.AddSodiumBicarbonate)
+				hasChemicals = true
+			}
+			if adjustment.AddCalciumChloride != nil && *adjustment.AddCalciumChloride > 0 {
+				chemicalsList += fmt.Sprintf("- Calcium Chloride: %.2f oz (weight)\n", *adjustment.AddCalciumChloride)
+				hasChemicals = true
+			}
+			if adjustment.AddBleach != nil && *adjustment.AddBleach > 0 {
+				chemicalsList += fmt.Sprintf("- Liquid Bleach: %.2f fl oz\n", *adjustment.AddBleach)
+				hasChemicals = true
+			}
+			if adjustment.AddTrichlor != nil && *adjustment.AddTrichlor > 0 {
+				chemicalsList += fmt.Sprintf("- Trichlor: %.2f oz (weight)\n", *adjustment.AddTrichlor)
+				hasChemicals = true
+			}
+			if adjustment.AddDichlor != nil && *adjustment.AddDichlor > 0 {
+				chemicalsList += fmt.Sprintf("- Dichlor: %.2f oz (weight)\n", *adjustment.AddDichlor)
+				hasChemicals = true
+			}
+			if adjustment.AddCalHypo != nil && *adjustment.AddCalHypo > 0 {
+				chemicalsList += fmt.Sprintf("- Cal-Hypo: %.2f oz (weight)\n", *adjustment.AddCalHypo)
+				hasChemicals = true
+			}
+			if adjustment.AddSalt != nil && *adjustment.AddSalt > 0 {
+				chemicalsList += fmt.Sprintf("- Salt: %.2f lbs\n", *adjustment.AddSalt)
+				hasChemicals = true
+			}
+			
+			if hasChemicals {
+				mdContent += "**Recommended Chemical Additions:**\n"
+				mdContent += chemicalsList
+				mdContent += "\n"
+			}
+			
+			// Notes
+			if adjustment.Notes != "" {
+				mdContent += fmt.Sprintf("**Notes:** %s\n\n", adjustment.Notes)
+			}
+			
+			mdContent += "---\n\n"
+		}
+	} else {
+		mdContent += "## Chemical Adjustments\n\nNo adjustments recorded.\n\n"
 	}
 	
 	// Add appendices at the bottom
@@ -1227,6 +1408,7 @@ func (h *Handlers) SaveAdjustment(c *gin.Context) {
 func (h *Handlers) GetAdjustments(c *gin.Context) {
 	poolID := c.Query("pool_id")
 	sampleID := c.Query("sample_id")
+	limitStr := c.Query("limit")
 	
 	var adjustments []models.Adjustment
 	query := h.db.Preload("Pool").Preload("Sample")
@@ -1237,6 +1419,13 @@ func (h *Handlers) GetAdjustments(c *gin.Context) {
 	
 	if sampleID != "" {
 		query = query.Where("sample_id = ?", sampleID)
+	}
+	
+	// Add limit if specified
+	if limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 {
+			query = query.Limit(limit)
+		}
 	}
 	
 	// Order by creation date, newest first
