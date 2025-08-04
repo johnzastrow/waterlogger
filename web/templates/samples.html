@@ -34,8 +34,65 @@
         <button @click="showAddModal = true" class="btn btn-primary">Add Sample</button>
     </div>
     
+    <!-- Filter and Sort Controls -->
+    <div class="controls-section">
+        <div class="filter-controls">
+            <div class="form-group">
+                <label for="pool_filter">Filter by Pool:</label>
+                <select id="pool_filter" x-model="filters.poolId" @change="applyFiltersAndSort()">
+                    <option value="">All Pools</option>
+                    <template x-for="pool in pools" :key="pool.id">
+                        <option :value="pool.id" x-text="pool.name"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="kit_filter">Filter by Test Kit:</label>
+                <select id="kit_filter" x-model="filters.kitId" @change="applyFiltersAndSort()">
+                    <option value="">All Test Kits</option>
+                    <template x-for="kit in kits" :key="kit.id">
+                        <option :value="kit.id" x-text="kit.name"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="date_from">From Date:</label>
+                <input type="date" id="date_from" x-model="filters.dateFrom" @change="applyFiltersAndSort()">
+            </div>
+            
+            <div class="form-group">
+                <label for="date_to">To Date:</label>
+                <input type="date" id="date_to" x-model="filters.dateTo" @change="applyFiltersAndSort()">
+            </div>
+        </div>
+        
+        <div class="sort-controls">
+            <div class="form-group">
+                <label for="sort_by">Sort by:</label>
+                <select id="sort_by" x-model="sortBy" @change="applyFiltersAndSort()">
+                    <option value="date_desc">Date (Newest First)</option>
+                    <option value="date_asc">Date (Oldest First)</option>
+                    <option value="pool_name">Pool Name</option>
+                    <option value="ph_asc">pH (Low to High)</option>
+                    <option value="ph_desc">pH (High to Low)</option>
+                    <option value="fc_asc">Free Chlorine (Low to High)</option>
+                    <option value="fc_desc">Free Chlorine (High to Low)</option>
+                </select>
+            </div>
+            
+            <button @click="clearFilters()" class="btn btn-sm btn-secondary">Clear Filters</button>
+        </div>
+    </div>
+    
+    <!-- Results Summary -->
+    <div class="results-summary" x-show="filteredSamples.length !== samples.length">
+        <p>Showing <span x-text="filteredSamples.length"></span> of <span x-text="samples.length"></span> samples</p>
+    </div>
+    
     <div class="samples-list">
-        <template x-for="sample in samples" :key="sample.id">
+        <template x-for="sample in filteredSamples" :key="sample.id">
             <div class="sample-card">
                 <div class="sample-header">
                     <div class="sample-info">
@@ -109,9 +166,14 @@
             </div>
         </template>
         
-        <div x-show="samples.length === 0" class="empty-state">
+        <div x-show="filteredSamples.length === 0 && samples.length === 0" class="empty-state">
             <p>No samples recorded yet.</p>
             <button @click="showAddModal = true" class="btn btn-primary">Add Your First Sample</button>
+        </div>
+        
+        <div x-show="filteredSamples.length === 0 && samples.length > 0" class="empty-state">
+            <p>No samples match the current filters.</p>
+            <button @click="clearFilters()" class="btn btn-secondary">Clear Filters</button>
         </div>
     </div>
     
@@ -230,11 +292,22 @@
     function samplesManager() {
         return {
             samples: [],
+            filteredSamples: [],
             pools: [],
             kits: [],
             showAddModal: false,
             showEditModal: false,
             loading: false,
+            
+            // Filter and sort properties
+            filters: {
+                poolId: '',
+                kitId: '',
+                dateFrom: '',
+                dateTo: ''
+            },
+            sortBy: 'date_desc',
+            
             currentSample: {
                 id: null,
                 pool_id: '',
@@ -278,6 +351,7 @@
                 const result = await WaterloggerHelpers.loadData('/api/samples', 'samples');
                 if (result.success) {
                     this.samples = result.data || [];
+                    this.applyFiltersAndSort();
                 }
             },
             
@@ -430,6 +504,92 @@
             formatDate(dateString) {
                 const date = new Date(dateString);
                 return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            },
+            
+            // Filter and sort methods
+            applyFiltersAndSort() {
+                let filtered = [...this.samples];
+                
+                // Apply pool filter
+                if (this.filters.poolId) {
+                    filtered = filtered.filter(sample => 
+                        sample.pool_id == this.filters.poolId
+                    );
+                }
+                
+                // Apply kit filter
+                if (this.filters.kitId) {
+                    filtered = filtered.filter(sample => 
+                        sample.kit_id == this.filters.kitId
+                    );
+                }
+                
+                // Apply date range filter
+                if (this.filters.dateFrom) {
+                    const fromDate = new Date(this.filters.dateFrom);
+                    filtered = filtered.filter(sample => {
+                        const sampleDate = new Date(sample.sample_datetime);
+                        return sampleDate >= fromDate;
+                    });
+                }
+                
+                if (this.filters.dateTo) {
+                    const toDate = new Date(this.filters.dateTo);
+                    toDate.setHours(23, 59, 59, 999); // End of day
+                    filtered = filtered.filter(sample => {
+                        const sampleDate = new Date(sample.sample_datetime);
+                        return sampleDate <= toDate;
+                    });
+                }
+                
+                // Apply sorting
+                filtered = this.applySorting(filtered);
+                
+                this.filteredSamples = filtered;
+            },
+            
+            applySorting(samples) {
+                return samples.sort((a, b) => {
+                    switch (this.sortBy) {
+                        case 'date_desc':
+                            return new Date(b.sample_datetime) - new Date(a.sample_datetime);
+                        case 'date_asc':
+                            return new Date(a.sample_datetime) - new Date(b.sample_datetime);
+                        case 'pool_name':
+                            const aPool = a.pool?.name || '';
+                            const bPool = b.pool?.name || '';
+                            return aPool.localeCompare(bPool);
+                        case 'ph_asc':
+                            const aPh = a.measurements?.ph || 0;
+                            const bPh = b.measurements?.ph || 0;
+                            return aPh - bPh;
+                        case 'ph_desc':
+                            const aPhDesc = a.measurements?.ph || 0;
+                            const bPhDesc = b.measurements?.ph || 0;
+                            return bPhDesc - aPhDesc;
+                        case 'fc_asc':
+                            const aFc = a.measurements?.fc || 0;
+                            const bFc = b.measurements?.fc || 0;
+                            return aFc - bFc;
+                        case 'fc_desc':
+                            const aFcDesc = a.measurements?.fc || 0;
+                            const bFcDesc = b.measurements?.fc || 0;
+                            return bFcDesc - aFcDesc;
+                        default:
+                            return 0;
+                    }
+                });
+            },
+            
+            clearFilters() {
+                this.filters = {
+                    poolId: '',
+                    kitId: '',
+                    dateFrom: '',
+                    dateTo: ''
+                };
+                this.sortBy = 'date_desc';
+                this.applyFiltersAndSort();
             }
         };
     }

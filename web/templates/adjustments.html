@@ -289,16 +289,24 @@
                         <template x-for="adjustment in pastAdjustments" :key="adjustment.id">
                             <div class="adjustment-card">
                                 <div class="adjustment-header">
-                                    <div class="adjustment-date">
-                                        <span x-text="formatDate(adjustment.created_at)"></span>
+                                    <div class="adjustment-info">
+                                        <div class="adjustment-date">
+                                            <span x-text="formatDate(adjustment.created_at)"></span>
+                                        </div>
+                                        <div class="adjustment-indices">
+                                            <span class="index-display">
+                                                LSI: <span :class="getLSIClass(adjustment.target_lsi)" x-text="formatIndex(adjustment.target_lsi)"></span>
+                                            </span>
+                                            <span class="index-display">
+                                                RSI: <span :class="getRSIClass(adjustment.target_rsi)" x-text="formatIndex(adjustment.target_rsi)"></span>
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div class="adjustment-indices">
-                                        <span class="index-display">
-                                            LSI: <span :class="getLSIClass(adjustment.target_lsi)" x-text="formatIndex(adjustment.target_lsi)"></span>
-                                        </span>
-                                        <span class="index-display">
-                                            RSI: <span :class="getRSIClass(adjustment.target_rsi)" x-text="formatIndex(adjustment.target_rsi)"></span>
-                                        </span>
+                                    <div class="adjustment-actions">
+                                        <button @click="deleteAdjustment(adjustment.id)" class="btn btn-sm btn-danger" 
+                                                title="Delete this adjustment recommendation">
+                                            🗑️ Delete
+                                        </button>
                                     </div>
                                 </div>
                                 
@@ -939,6 +947,31 @@
                             printWindow.print();
                         }, 500);
                     };
+                },
+                
+                async deleteAdjustment(adjustmentId) {
+                    if (!confirm('Are you sure you want to delete this adjustment recommendation? This action cannot be undone.')) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`/api/adjustments/${adjustmentId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                        });
+                        
+                        if (response.ok) {
+                            // Reload past adjustments to refresh the list
+                            await this.loadPastAdjustments();
+                        } else {
+                            const error = await response.json();
+                            alert('Failed to delete adjustment: ' + (error.error || 'Unknown error'));
+                        }
+                    } catch (error) {
+                        alert('Failed to delete adjustment: ' + error.message);
+                    }
                 }
             };
         }

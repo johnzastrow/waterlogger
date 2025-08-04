@@ -37,7 +37,8 @@
       "Bash(bash:*)",
       "Bash(dos2unix:*)",
       "WebFetch(domain:github.com)",
-      "Bash(./test_samples_fix.sh:*)"
+      "Bash(./test_samples_fix.sh:*)",
+      "Bash(./test_features.sh:*)"
     ],
     "deny": []
   }

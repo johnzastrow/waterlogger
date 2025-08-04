@@ -662,6 +662,64 @@ body {
     gap: 2rem;
 }
 
+/* Filter and Sort Controls */
+.controls-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.filter-controls, .sort-controls {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.sort-controls {
+    margin-bottom: 0;
+    justify-content: space-between;
+}
+
+.filter-controls .form-group, .sort-controls .form-group {
+    min-width: 150px;
+    margin-bottom: 0;
+}
+
+.filter-controls label, .sort-controls label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 5px;
+}
+
+.results-summary {
+    background: #e3f2fd;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #1976d2;
+}
+
+@media (max-width: 768px) {
+    .filter-controls, .sort-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-controls .form-group, .sort-controls .form-group {
+        min-width: unset;
+    }
+    
+    .sort-controls {
+        align-items: stretch;
+    }
+}
+
 .sample-card {
     background: white;
     padding: 1.5rem;
@@ -1649,10 +1707,18 @@ body {
 .adjustment-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #e9ecef;
+}
+
+.adjustment-info {
+    flex: 1;
+}
+
+.adjustment-actions {
+    margin-left: 15px;
 }
 
 .adjustment-date {

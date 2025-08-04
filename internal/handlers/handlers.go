@@ -1475,3 +1475,27 @@ func (h *Handlers) GetAdjustment(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, adjustment)
 }
+
+// Delete adjustment by ID
+func (h *Handlers) DeleteAdjustment(c *gin.Context) {
+	id := c.Param("id")
+	
+	// Check if adjustment exists
+	var adjustment models.Adjustment
+	if err := h.db.First(&adjustment, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Adjustment not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch adjustment"})
+		}
+		return
+	}
+	
+	// Delete the adjustment
+	if err := h.db.Delete(&adjustment).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete adjustment"})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Adjustment deleted successfully"})
+}

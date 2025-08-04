@@ -259,6 +259,7 @@ func setupRoutes(router *gin.Engine, h *handlers.Handlers) {
 		api.POST("/adjustments", h.SaveAdjustment)
 		api.GET("/adjustments", h.GetAdjustments)
 		api.GET("/adjustments/:id", h.GetAdjustment)
+		api.DELETE("/adjustments/:id", h.DeleteAdjustment)
 	}
 
 	// 404 handler
