@@ -291,11 +291,33 @@ func (h *Handlers) SamplesPage(c *gin.Context) {
 
 func (h *Handlers) GetSamples(c *gin.Context) {
 	var samples []models.Sample
-	if err := h.db.Preload("Pool").Preload("User").Preload("Kit").
-		Preload("Measurements").Preload("Indices").Find(&samples).Error; err != nil {
+	
+	// Build query based on parameters
+	query := h.db.Preload("Pool").Preload("User").Preload("Kit").
+		Preload("Measurements").Preload("Indices")
+	
+	// Filter by pool_id if provided
+	if poolID := c.Query("pool_id"); poolID != "" {
+		if id, err := strconv.Atoi(poolID); err == nil {
+			query = query.Where("pool_id = ?", id)
+		}
+	}
+	
+	// Order by sample_datetime descending to get most recent first
+	query = query.Order("sample_date_time DESC")
+	
+	// Apply limit if provided
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 {
+			query = query.Limit(limit)
+		}
+	}
+	
+	if err := query.Find(&samples).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch samples"})
 		return
 	}
+	
 	c.JSON(http.StatusOK, samples)
 }
 

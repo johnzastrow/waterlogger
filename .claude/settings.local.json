@@ -35,7 +35,9 @@
       "Bash(./waterlogger:*)",
       "Bash(wget:*)",
       "Bash(bash:*)",
-      "Bash(dos2unix:*)"
+      "Bash(dos2unix:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(./test_samples_fix.sh:*)"
     ],
     "deny": []
   }
