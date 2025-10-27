@@ -52,7 +52,12 @@
 
 ## 🔴 HIGH PRIORITY - Critical Gaps
 
-October 26, 2025 Testing: The version tag that appears in the bottom-right corner of the UI should be updated to  the current version shown in the CHANGELOG.md (1.3.0). However, right now it shows "v | Built on 2025-10-26 at 22:02:00" and it should show "v1.3.0 | Built on 2025-10-26 at 22:02:00".
+October 26, 2025 Testing: 
+
+1. The version tag that appears in the bottom-right corner of the UI should be updated to  the current version shown in the CHANGELOG.md (1.3.0). However, right now it shows "v | Built on 2025-10-26 at 22:02:00" and it should show "v1.3.0 | Built on 2025-10-26 at 22:02:00".
+2. Finishing checking the documentation to reflect the current build approaches, particularly for Windows with MSYS2 and MinGW-w64 GCC and on linux.
+3. Check the README instructions for setting up systemd on Linux. The example service file has issues.
+4. 
 
 
 ### 1. Excel Export is Broken
@@ -78,9 +83,69 @@ October 26, 2025 Testing: The version tag that appears in the bottom-right corne
 
 **Reference:** CLAUDE.md Line 144-149
 
+
+---
+### 2a. Database Migration to and from MariaDB and SQLite
+**Status:** NOT IMPLEMENTED - No code exists for migration
+**Location:** Should be in `internal/database/migration.go`
+**Issue:** No migration code found
+**Tasks:**
+- [ ] Create `internal/database/migration.go` file
+- [ ] Implement `MigrateSQLiteToMariaDB(sqlitePath, mariaDBConfig)` function
+  - [ ] Connect to SQLite database
+  - [ ] Connect to MariaDB database
+  - [ ] Migrate schema (tables, indexes)
+  - [ ] Migrate data (users, pools, kits, samples, measurements, adjustments
+  - [ ] Handle data type conversions
+  - [ ] Add error handling and logging
+  - [ ] Test migration with sample databases
+  - [ ] Optimize for large datasets
+  - [ ] Document usage in README.md
+  - [ ] Implement `MigrateMariaDBToSQLite(mariaDBConfig, sqlitePath)` function
+  - [ ] Connect to MariaDB database
+  - [ ] Connect to SQLite database
+  - [ ] Migrate schema (tables, indexes)
+  - [ ] Migrate data (users, pools, kits, samples, measurements, adjustments
+  - [ ] Handle data type conversions
+  - [ ] Add error handling and logging
+  - [ ] Test migration with sample databases
+  - [ ] Optimize for large datasets
+  - [ ] Document usage in README.md
+  - [ ] Add command-line flags to trigger migrations:
+  - [ ] `./waterlogger -migrate-sqlite-to-mariadb -
+  - [ ] sqlite-path=path/to/sqlite.db -mariadb-config=path/to/config.yaml`
+  - [ ] `./waterlogger -migrate-mariadb-to-sqlite -
+  - [ ] mariadb-config=path/to/config.yaml -sqlite-path=path/to/sqlite.db`
+  - [ ] Test command-line migration triggers
+  - [ ] Update documentation with migration instructions
+  - [ ] Add unit tests for migration functions
+  - [ ] Add integration tests for end-to-end migration scenarios
+  - [ ] Review and refactor code for maintainability
+  - [ ] Get peer review and feedback
+  - [ ] Finalize and merge into main codebase
+  - [ ] Release new version with migration feature
+  - [ ] Announce feature in CHANGELOG.md and release notes
+  - [ ] Monitor user feedback and address issues
+  - [ ] Plan for future enhancements based on user needs
+  - [ ] Document known limitations and workarounds
+  - [ ] Provide sample configuration files for migration
+  - [ ] Create troubleshooting guide for migration issues
+  - [ ] Add logging for migration progress and errors
+  - [ ] Optimize performance for large databases
+  - [ ] Ensure data integrity and consistency post-migration
+  - [ ] Test with various MariaDB versions (10.x, 11.x)
+  - [ ] Test with various SQLite versions (3.x)
+  - [ ] Get feedback from beta testers
+  - [ ] Iterate based on feedback and bug reports
+  - [ ] Prepare for official release
+  - [ ] Update website and documentation with new feature details
+  - [ ] Celebrate successful implementation!
+  - [ ] Reference:** CLAUDE.md Line 215-225
+  - [ ] 
+
 ---
 
-### 2. PDF Export Not Implemented
+### 2b. PDF Export Not Implemented
 **Status:** NOT IMPLEMENTED - Documented as complete but no code exists
 **Location:** Should be in `internal/handlers/handlers.go`
 **Issue:** No PDF generation code found
