@@ -9,7 +9,11 @@
       "Bash(timeout 5 ./waterlogger:*)",
       "Read(//usr/**)",
       "Bash(curl:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(for file in web/templates/*.html)",
+      "Bash(do sed -i 's|#130---2025-10-26|#140---2025-10-27|g' \"$file\")",
+      "Bash(done)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []

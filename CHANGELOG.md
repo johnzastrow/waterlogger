@@ -59,6 +59,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `POST /api/settings/backup` - Create database backup on demand
 - Enhanced `GET /api/settings` - Returns comprehensive system information
 
+#### Automated Deployment Scripts
+- **Linux deployment script** (`deploy-linux.sh`) for automated systemd service installation
+  - Creates installation directory structure (`/opt/waterlogger`, `logs/`, `backups/`)
+  - Creates dedicated `waterlogger` user with proper permissions
+  - Optional production configuration (json logging, file output)
+  - Generates systemd service file with security hardening
+  - Auto-enables service to start on boot
+- **Windows deployment script** (`deploy-windows.bat`) for automated Windows service installation
+  - Creates installation directory structure (`C:\Program Files\Waterlogger`, `logs/`, `backups/`)
+  - Optional production configuration
+  - Creates Windows service with automatic restart on failure
+  - Includes service management commands
+- **Enhanced systemd service file** with:
+  - Security hardening (NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp)
+  - Proper working directory and read-write paths
+  - Journald integration with SyslogIdentifier
+  - Restart policy with 10-second delay
+  - Documentation link
+- **Comprehensive deployment documentation** in README.md
+  - Quick deployment (automated) and manual deployment options
+  - Production configuration recommendations
+  - Log viewing instructions
+  - Service management commands
+
 ### Changed
 - **GetSettings API** now includes schema version, migration count, and database details
 - **Settings page** completely redesigned with organized sections

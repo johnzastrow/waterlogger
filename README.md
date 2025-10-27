@@ -29,6 +29,13 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 - **Cross-Database Migration**: Bidirectional data migration between SQLite and MariaDB
 - **Enhanced Settings UI**: Comprehensive system information display including app version, build info, database type, and schema version
 
+### Deployment Automation (Version 1.4+)
+- **Automated Linux Deployment**: One-command deployment script (`deploy-linux.sh`) that handles everything from directory creation to systemd service installation
+- **Automated Windows Deployment**: One-command deployment script (`deploy-windows.bat`) for Windows service installation
+- **Security Hardening**: Systemd service includes NoNewPrivileges, ProtectSystem, and other security features
+- **Production-Ready Defaults**: Optional automatic configuration for production logging settings
+- **Service Management**: Automatic service creation with restart policies and proper permissions
+
 ### Technical Features
 - **Export Functionality**: Export data to Excel, Markdown, and JSON backup formats
 - **Responsive Design**: Mobile-friendly interface with modern UI and professional favicon
@@ -130,17 +137,97 @@ build.bat
 waterlogger.exe
 ```
 
-#### Running as Windows Service
-1. Copy the executable to your preferred location (e.g., `C:\Program Files\Waterlogger\`)
-2. Create a Windows service using `sc create` or a service manager
-3. Configure the service to run at startup
+#### Quick Deployment (Automated)
 
-Example service creation:
+**⚡ Use the automated deployment script:**
 ```cmd
-sc create Waterlogger binpath="C:\Program Files\Waterlogger\waterlogger.exe" start=auto
-sc description Waterlogger "Pool and Hot Tub Water Management System"
-sc start Waterlogger
+REM Run as Administrator
+deploy-windows.bat
 ```
+
+This script will:
+- Create the installation directory structure (`C:\Program Files\Waterlogger`)
+- Copy files to the correct locations
+- Optionally configure for production logging
+- Create and configure the Windows service
+- Set up automatic restart on failure
+
+#### Manual Deployment
+
+1. **Create application directory and copy files:**
+   ```cmd
+   REM Create application directory structure
+   mkdir "C:\Program Files\Waterlogger"
+   mkdir "C:\Program Files\Waterlogger\logs"
+   mkdir "C:\Program Files\Waterlogger\backups"
+
+   REM Copy the executable
+   copy waterlogger.exe "C:\Program Files\Waterlogger\"
+
+   REM Copy and configure config file
+   copy config.yaml "C:\Program Files\Waterlogger\"
+
+   REM Edit C:\Program Files\Waterlogger\config.yaml for production
+   REM Recommended changes:
+   REM   logging.format: json
+   REM   logging.output: file
+   REM   logging.level: info
+   ```
+
+2. **Create Windows service:**
+   ```cmd
+   REM Create the service
+   sc create Waterlogger binpath="C:\Program Files\Waterlogger\waterlogger.exe -config C:\Program Files\Waterlogger\config.yaml" start=auto DisplayName="Waterlogger"
+
+   REM Set service description
+   sc description Waterlogger "Pool and Hot Tub Water Management System"
+
+   REM Set service to restart on failure
+   sc failure Waterlogger reset=86400 actions=restart/60000/restart/60000/restart/60000
+
+   REM Start the service
+   sc start Waterlogger
+   ```
+
+3. **Check service status:**
+   ```cmd
+   REM View service status
+   sc query Waterlogger
+
+   REM View service configuration
+   sc qc Waterlogger
+   ```
+
+4. **View logs:**
+   ```cmd
+   REM View log file (if using file logging)
+   type "C:\Program Files\Waterlogger\logs\waterlogger.log"
+
+   REM View Windows Event Log
+   eventvwr.msc
+   ```
+
+5. **Access the application:**
+   ```
+   Open your browser to http://localhost:2342
+   Default credentials (created on first run):
+   Username: admin
+   Password: admin
+
+   ⚠️ IMPORTANT: Change the default password immediately after first login!
+   ```
+
+6. **Manage the service:**
+   ```cmd
+   REM Stop the service
+   sc stop Waterlogger
+
+   REM Start the service
+   sc start Waterlogger
+
+   REM Delete the service (if needed)
+   sc delete Waterlogger
+   ```
 
 ### Linux
 
@@ -180,18 +267,45 @@ chmod +x build.sh
 ./waterlogger
 ```
 
-#### Running as Linux Service (systemd)
+#### Quick Deployment (Automated)
+
+**⚡ Use the automated deployment script:**
+```bash
+# Run with sudo
+sudo ./deploy-linux.sh
+```
+
+This script will:
+- Create the installation directory structure (`/opt/waterlogger`)
+- Copy files to the correct locations
+- Create dedicated `waterlogger` user
+- Optionally configure for production logging
+- Create and enable the systemd service
+- Set up security hardening
+
+#### Manual Deployment
 
 1. **Create application directory and copy files:**
    ```bash
-   # Create application directory
+   # Create application directory structure
    sudo mkdir -p /opt/waterlogger
+   sudo mkdir -p /opt/waterlogger/logs
+   sudo mkdir -p /opt/waterlogger/backups
 
    # Copy the executable
    sudo cp waterlogger /opt/waterlogger/
 
    # Copy and configure config file
    sudo cp config.yaml /opt/waterlogger/
+
+   # Edit config for production (optional but recommended)
+   sudo nano /opt/waterlogger/config.yaml
+   # Recommended changes for production:
+   #   logging.format: json
+   #   logging.output: file
+   #   logging.level: info
+
+   # Secure the config file
    sudo chmod 600 /opt/waterlogger/config.yaml
    ```
 
@@ -203,26 +317,46 @@ chmod +x build.sh
 
 3. **Create systemd service file:**
    ```bash
-   sudo tee /etc/systemd/system/waterlogger.service > /dev/null <<EOF
-   [Unit]
-   Description=Waterlogger - Pool and Hot Tub Water Management System
-   After=network.target
+   sudo tee /etc/systemd/system/waterlogger.service > /dev/null <<'EOF'
+[Unit]
+Description=Waterlogger - Pool and Hot Tub Water Management System
+After=network.target
+Documentation=https://github.com/johnzastrow/waterlogger
 
-   [Service]
-   Type=simple
-   User=waterlogger
-   Group=waterlogger
-   WorkingDirectory=/opt/waterlogger
-   Environment=GIN_MODE=release
-   ExecStart=/opt/waterlogger/waterlogger -config /opt/waterlogger/config.yaml
-   StandardOutput=journal
-   StandardError=journal
-   Restart=always
-   RestartSec=10
+[Service]
+Type=simple
+User=waterlogger
+Group=waterlogger
+WorkingDirectory=/opt/waterlogger
 
-   [Install]
-   WantedBy=multi-user.target
-   EOF
+# Environment
+Environment=GIN_MODE=release
+
+# Execution
+ExecStart=/opt/waterlogger/waterlogger -config /opt/waterlogger/config.yaml
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=waterlogger
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Security hardening (optional but recommended)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/waterlogger
+
+# Resource limits (optional)
+#LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+EOF
    ```
 
 4. **Enable and start the service:**
@@ -242,11 +376,24 @@ chmod +x build.sh
 
 5. **View logs:**
    ```bash
-   # Follow live logs
+   # Follow live logs (from journald)
    sudo journalctl -u waterlogger -f
 
    # View recent logs
    sudo journalctl -u waterlogger -n 100
+
+   # View log file (if using file logging)
+   sudo tail -f /opt/waterlogger/logs/waterlogger.log
+   ```
+
+6. **Access the application:**
+   ```
+   Open your browser to http://your-server-ip:2342
+   Default credentials (created on first run):
+   Username: admin
+   Password: admin
+
+   ⚠️ IMPORTANT: Change the default password immediately after first login!
    ```
 
 ### Cross-Platform Building
@@ -443,34 +590,36 @@ When running in production mode:
 
 #### Logging Configuration
 
-**Basic Logging to File:**
+Waterlogger includes built-in structured logging with automatic log rotation (see LOGGING.md for details).
 
-```bash
-# Linux/macOS
-./waterlogger > /var/log/waterlogger.log 2>&1
+**Configure logging in `config.yaml`:**
 
-# Windows
-waterlogger.exe > waterlogger.log 2>&1
+```yaml
+logging:
+    level: info           # debug, info, warn, error, fatal
+    format: console       # json (production), console (development)
+    output: both          # stdout, file, both
+    file_path: logs/waterlogger.log
+    max_size: 100         # MB
+    max_backups: 3        # number of old log files to keep
+    max_age: 28           # days
+    compress: true        # compress old log files
 ```
 
-**Production Logging with Rotation:**
+**Recommended production settings:**
+```yaml
+logging:
+    level: info
+    format: json
+    output: file
+```
 
-For production environments, consider using log rotation:
-
-```bash
-# Linux with logrotate
-./waterlogger > /var/log/waterlogger.log 2>&1 &
-
-# Create /etc/logrotate.d/waterlogger:
-# /var/log/waterlogger.log {
-#     daily
-#     rotate 7
-#     compress
-#     delaycompress
-#     missingok
-#     notifempty
-#     create 0644 waterlogger waterlogger
-# }
+**Recommended development settings:**
+```yaml
+logging:
+    level: debug
+    format: console
+    output: both
 ```
 
 **Debug Mode (Development Only):**
@@ -484,35 +633,6 @@ GIN_MODE=debug ./waterlogger
 # Windows
 set GIN_MODE=debug
 waterlogger.exe
-```
-
-#### Systemd Service with Logging
-
-For Linux systems using systemd, create a service file that includes proper logging:
-
-```ini
-[Unit]
-Description=Waterlogger Service
-After=network.target
-
-[Service]
-Type=simple
-User=waterlogger
-WorkingDirectory=/opt/waterlogger
-Environment=GIN_MODE=release
-ExecStart=/opt/waterlogger/waterlogger -config /opt/waterlogger/config.yaml
-StandardOutput=journal
-StandardError=journal
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-```
-
-View logs with:
-```bash
-sudo journalctl -u waterlogger -f
 ```
 
 ### Command Line Options

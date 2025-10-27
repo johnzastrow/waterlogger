@@ -421,6 +421,20 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - **Database Backup System**: One-click JSON backups from web UI with auto-generated timestamped filenames (WL<timestamp>.json)
 - **Migration Testing**: Comprehensive testing of schema migrations on both SQLite and MariaDB
 - **Foreign Key Validation**: Enhanced data migration code to validate and fix all foreign key relationships
+- **Automated Deployment Scripts**:
+  - **Linux**: `deploy-linux.sh` - One-command deployment with systemd service creation
+    - Creates directory structure (`/opt/waterlogger`, `logs/`, `backups/`)
+    - Creates dedicated user with proper permissions
+    - Optional production configuration (json logging, file output)
+    - Generates systemd service file with security hardening
+    - Auto-enables service to start on boot
+  - **Windows**: `deploy-windows.bat` - One-command deployment with Windows service creation
+    - Creates directory structure (`C:\Program Files\Waterlogger`, `logs/`, `backups/`)
+    - Optional production configuration
+    - Creates Windows service with automatic restart on failure
+    - Includes service management commands
+  - **Enhanced service files** with security hardening, proper restart policies, and complete documentation
+  - **Simplified deployment**: Single command goes from binary to production-ready service
 
 ## Notes
 

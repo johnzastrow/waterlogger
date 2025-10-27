@@ -1,8 +1,8 @@
 # Waterlogger TODO List
 
-**Last Updated:** 2025-10-26
+**Last Updated:** 2025-10-27
 **Version:** 1.4.0
-**Status:** Core functionality complete, logging system complete, production features incomplete
+**Status:** Core functionality complete, logging system complete, schema migrations complete, production features incomplete
 
 ---
 
@@ -45,19 +45,63 @@
 - [x] Adjustment history tracking
 - [x] Command-line data export utility
 - [x] Command-line data import utility
-- [x] Database migration commands
+- [x] Database migration commands (SQLite ↔ MariaDB)
 - [x] Audit trail (created_by, updated_by timestamps)
+
+### Logging System (v1.3)
+- [x] Structured logging with zerolog
+- [x] Log rotation with lumberjack
+- [x] Multiple log levels (debug, info, warn, error, fatal)
+- [x] Multiple output destinations (stdout, file, both)
+- [x] Request ID middleware for request tracing
+- [x] Security audit logging
+- [x] Custom GORM logger with error categorization
+- [x] Slow query detection
+- [x] HTTP request logging with comprehensive details
+- [x] Logging configuration in config.yaml
+- [x] LOGGING.md documentation
+
+### Database Management (v1.4)
+- [x] Schema migration system with version tracking
+- [x] SchemaMigration model for tracking applied migrations
+- [x] Migration interface with Up() and Down() methods
+- [x] Automatic migration execution on startup
+- [x] Transaction-wrapped migrations for atomicity
+- [x] Command-line migration tools (`-migration-status`, `-migration-rollback`)
+- [x] Cross-database schema migration support (SQLite & MariaDB)
+- [x] MIGRATIONS.md comprehensive documentation
+- [x] Enhanced Settings UI with system information
+- [x] Database schema migrations history display
+- [x] One-click database backup from web UI
+- [x] New API endpoints (`/api/settings/migrations`, `/api/settings/backup`)
+- [x] Foreign key validation in data migration
+
+### Data Migration Between Database Types (v1.0+)
+- [x] Database migration implementation (`internal/database/migration.go`)
+- [x] MigrateSQLiteToMariaDB function with schema and data transfer
+- [x] MigrateMariaDBToSQLite function with schema and data transfer
+- [x] Data type conversion handling between database types
+- [x] Comprehensive error handling and logging
+- [x] Command-line flags (`-migrate-to-mariadb`, `-migrate-to-sqlite`)
+- [x] JSON backup export functionality (ExportData)
+- [x] JSON backup import/restore functionality (ImportData)
+- [x] Foreign key relationship validation
+- [x] Tested with sample databases
+- [x] Documentation in README.md and BUILD_REQUIREMENTS.md
 
 ---
 
 ## 🔴 HIGH PRIORITY - Critical Gaps
 
-October 26, 2025 Testing: 
+October 27, 2025 Testing:
 
-1. The version tag that appears in the bottom-right corner of the UI should be updated to  the current version shown in the CHANGELOG.md (1.4.0). However, right now it shows "v | Built on 2025-10-27" and it should show "v1.4.0 | Built on 2025-10-27".
+1. ~~The version tag that appears in the bottom-right corner of the UI should be updated to  the current version shown in the CHANGELOG.md (1.4.0). However, right now it shows "v | Built on 2025-10-27" and it should show "v1.4.0 | Built on 2025-10-27".~~ **RESOLVED** - Updated all 10 HTML templates with correct changelog anchor links (#140---2025-10-27)
 2. Finishing checking the documentation to reflect the current build approaches, particularly for Windows with MSYS2 and MinGW-w64 GCC and on linux.
-3. Check the README instructions for setting up systemd on Linux. The example service file has issues.
-4. 
+3. ~~Check the README instructions for setting up systemd on Linux. The example service file has issues.~~ **REVIEWED** - Service file is functional but could use improvements:
+   - Missing instruction to create `logs/` directory before first run
+   - Should recommend `format: json` and `output: file` for production logging config
+   - Missing mention of `backups/` directory (auto-created but worth documenting)
+   - Could add security hardening directives (ReadWritePaths, NoNewPrivileges, etc.) 
 
 
 ### 1. Excel Export is Broken
@@ -83,69 +127,9 @@ October 26, 2025 Testing:
 
 **Reference:** CLAUDE.md Line 144-149
 
-
----
-### 2a. Database Migration to and from MariaDB and SQLite
-**Status:** NOT IMPLEMENTED - No code exists for migration
-**Location:** Should be in `internal/database/migration.go`
-**Issue:** No migration code found
-**Tasks:**
-- [ ] Create `internal/database/migration.go` file
-- [ ] Implement `MigrateSQLiteToMariaDB(sqlitePath, mariaDBConfig)` function
-  - [ ] Connect to SQLite database
-  - [ ] Connect to MariaDB database
-  - [ ] Migrate schema (tables, indexes)
-  - [ ] Migrate data (users, pools, kits, samples, measurements, adjustments
-  - [ ] Handle data type conversions
-  - [ ] Add error handling and logging
-  - [ ] Test migration with sample databases
-  - [ ] Optimize for large datasets
-  - [ ] Document usage in README.md
-  - [ ] Implement `MigrateMariaDBToSQLite(mariaDBConfig, sqlitePath)` function
-  - [ ] Connect to MariaDB database
-  - [ ] Connect to SQLite database
-  - [ ] Migrate schema (tables, indexes)
-  - [ ] Migrate data (users, pools, kits, samples, measurements, adjustments
-  - [ ] Handle data type conversions
-  - [ ] Add error handling and logging
-  - [ ] Test migration with sample databases
-  - [ ] Optimize for large datasets
-  - [ ] Document usage in README.md
-  - [ ] Add command-line flags to trigger migrations:
-  - [ ] `./waterlogger -migrate-sqlite-to-mariadb -
-  - [ ] sqlite-path=path/to/sqlite.db -mariadb-config=path/to/config.yaml`
-  - [ ] `./waterlogger -migrate-mariadb-to-sqlite -
-  - [ ] mariadb-config=path/to/config.yaml -sqlite-path=path/to/sqlite.db`
-  - [ ] Test command-line migration triggers
-  - [ ] Update documentation with migration instructions
-  - [ ] Add unit tests for migration functions
-  - [ ] Add integration tests for end-to-end migration scenarios
-  - [ ] Review and refactor code for maintainability
-  - [ ] Get peer review and feedback
-  - [ ] Finalize and merge into main codebase
-  - [ ] Release new version with migration feature
-  - [ ] Announce feature in CHANGELOG.md and release notes
-  - [ ] Monitor user feedback and address issues
-  - [ ] Plan for future enhancements based on user needs
-  - [ ] Document known limitations and workarounds
-  - [ ] Provide sample configuration files for migration
-  - [ ] Create troubleshooting guide for migration issues
-  - [ ] Add logging for migration progress and errors
-  - [ ] Optimize performance for large databases
-  - [ ] Ensure data integrity and consistency post-migration
-  - [ ] Test with various MariaDB versions (10.x, 11.x)
-  - [ ] Test with various SQLite versions (3.x)
-  - [ ] Get feedback from beta testers
-  - [ ] Iterate based on feedback and bug reports
-  - [ ] Prepare for official release
-  - [ ] Update website and documentation with new feature details
-  - [ ] Celebrate successful implementation!
-  - [ ] Reference:** CLAUDE.md Line 215-225
-  - [ ] 
-
 ---
 
-### 2b. PDF Export Not Implemented
+### 2. PDF Export Not Implemented
 **Status:** NOT IMPLEMENTED - Documented as complete but no code exists
 **Location:** Should be in `internal/handlers/handlers.go`
 **Issue:** No PDF generation code found
@@ -167,18 +151,20 @@ October 26, 2025 Testing:
 
 ---
 
-### 3. Charts Not Working
-**Status:** PARTIAL - Templates exist but no data binding
-**Location:** `web/templates/dashboard.html`, need backend handlers
-**Issue:** Chart.js included but not connected to backend data
+### 3. Charts Not Implemented
+**Status:** NOT IMPLEMENTED - No Chart.js library, no templates, no backend
+**Location:** Should be in `web/templates/samples.html` or `dashboard.html`
+**Issue:** Charts feature is completely missing
 
 **Tasks:**
+- [ ] Add Chart.js library to `web/static/js/` (CDN or local)
 - [ ] Implement chart data API endpoint (`GET /api/charts/data`)
 - [ ] Add date range filtering logic (default: last 30 days)
 - [ ] Add parameter selection logic
 - [ ] Exclude TDS, CYA, SAL by default (per requirements)
 - [ ] Implement multi-parameter overlays for correlation
-- [ ] Add chart rendering JavaScript in dashboard template
+- [ ] Add chart rendering JavaScript in samples/dashboard template
+- [ ] Add canvas elements to HTML templates
 - [ ] Test chart zoom capabilities
 - [ ] Add loading states for chart data
 - [ ] Optimize queries for large datasets
@@ -188,31 +174,34 @@ October 26, 2025 Testing:
 
 ---
 
-### 4. Service File Generation Missing
-**Status:** NOT IMPLEMENTED - Critical for production deployment
-**Location:** Should be in `internal/service/` (new package)
-**Issue:** No systemd or Windows service files exist
+### 4. Service Deployment - COMPLETED ✅
+**Status:** COMPLETE - Automated deployment scripts created
+**Location:** `deploy-linux.sh`, `deploy-windows.bat`, README.md
+**What was implemented:**
+- ✅ Linux automated deployment script (`deploy-linux.sh`)
+  - Creates directory structure (`/opt/waterlogger`, `logs/`, `backups/`)
+  - Creates dedicated user
+  - Configures for production (optional)
+  - Creates systemd service with security hardening
+  - Auto-enables service
+- ✅ Windows automated deployment script (`deploy-windows.bat`)
+  - Creates directory structure (`C:\Program Files\Waterlogger`, `logs/`, `backups/`)
+  - Configures for production (optional)
+  - Creates Windows service with auto-restart
+  - Service management commands
+- ✅ Comprehensive systemd service file with:
+  - Security hardening (NoNewPrivileges, ProtectSystem, etc.)
+  - Proper restart policies
+  - Journald integration
+  - Working directory and paths
+- ✅ Windows service configuration with:
+  - Automatic restart on failure
+  - Proper paths and config
+  - Service management commands
+- ✅ Complete documentation in README.md
+- ✅ Both automated and manual deployment instructions
 
-**Tasks:**
-- [ ] Create `internal/service/` package
-- [ ] Implement systemd service file generation for Linux
-  - [ ] Template: `/etc/systemd/system/waterlogger.service`
-  - [ ] Auto-detect installation path
-  - [ ] Set proper user/group permissions
-  - [ ] Add restart policies
-- [ ] Implement Windows service file generation
-  - [ ] Use `golang.org/x/sys/windows/svc` package
-  - [ ] Create service installer/uninstaller
-- [ ] Add command-line flags:
-  - [ ] `./waterlogger -install-service`
-  - [ ] `./waterlogger -uninstall-service`
-  - [ ] `./waterlogger -generate-service-file`
-- [ ] Add service management to setup wizard
-- [ ] Test on Ubuntu Linux
-- [ ] Test on Windows Server
-- [ ] Update documentation with service installation steps
-
-**Reference:** CLAUDE.md Line 67, 200
+**Reference:** README.md Lines 133-377
 
 ---
 
