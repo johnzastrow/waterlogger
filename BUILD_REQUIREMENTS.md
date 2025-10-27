@@ -320,7 +320,7 @@ After building, verify CGO is enabled:
 
 Should output:
 ```
-Waterlogger v1.3.0
+Waterlogger v1.4.0
 ```
 
 If you see the SQLite error, CGO was not enabled during build.
@@ -465,4 +465,4 @@ Include:
 ---
 
 **Last Updated:** 2025-10-26
-**Version:** 1.3.0
+**Version:** 1.4.0

@@ -21,12 +21,21 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 - **PDF Export**: Professional PDF generation for adjustment details with safety guidelines and water balance explanations
 - **Dashboard Analytics**: Quick overview of recent samples, water quality status, and recent adjustments across all pools
 
+### Database Management (Version 1.4+)
+- **Schema Migration System**: Version-tracked database schema changes with automatic migration on startup
+- **Migration Management UI**: View complete migration history and status from the settings page
+- **One-Click Database Backups**: Create timestamped JSON backups directly from the web interface
+- **Migration Commands**: Command-line tools for viewing status and rolling back migrations
+- **Cross-Database Migration**: Bidirectional data migration between SQLite and MariaDB
+- **Enhanced Settings UI**: Comprehensive system information display including app version, build info, database type, and schema version
+
 ### Technical Features
 - **Export Functionality**: Export data to Excel, Markdown, and JSON backup formats
 - **Responsive Design**: Mobile-friendly interface with modern UI and professional favicon
-- **Database Flexibility**: Support for SQLite and MariaDB databases
+- **Database Flexibility**: Support for SQLite and MariaDB databases with migration capabilities
 - **Cross-Platform**: Single executable for Windows and Linux
 - **Build Timestamps**: Each build includes deployment tracking in the UI
+- **Structured Logging**: High-performance logging with rotation, multiple outputs, and audit trails
 
 ## Screenshots
 
@@ -325,7 +334,7 @@ database:
 
 app:
   name: "Waterlogger"
-  version: "1.3.0"
+  version: "1.4.0"
   secret_key: "change-this-to-a-secure-random-string"
 
 logging:

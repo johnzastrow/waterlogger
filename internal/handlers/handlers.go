@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"waterlogger/internal/adjustments"
 	"waterlogger/internal/chemistry"
 	"waterlogger/internal/config"
+	"waterlogger/internal/database"
 	"waterlogger/internal/logging"
 	"waterlogger/internal/middleware"
 	"waterlogger/internal/models"
@@ -1232,7 +1234,7 @@ func (h *Handlers) GetSettings(c *gin.Context) {
 			}
 			preferences.CreatedBy = userID.(uint)
 			preferences.UpdatedBy = userID.(uint)
-			
+
 			if err := h.db.Create(&preferences).Error; err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create default preferences"})
 				return
@@ -1243,11 +1245,43 @@ func (h *Handlers) GetSettings(c *gin.Context) {
 		}
 	}
 
+	// Get latest applied migration
+	var latestMigration models.SchemaMigration
+	var schemaVersion string
+	var migrationCount int64
+
+	h.db.Model(&models.SchemaMigration{}).Count(&migrationCount)
+	if err := h.db.Order("applied_at DESC").First(&latestMigration).Error; err == nil {
+		schemaVersion = latestMigration.Version + " - " + latestMigration.Name
+	} else {
+		schemaVersion = "No migrations applied"
+	}
+
+	// Database connection info (sanitized)
+	dbInfo := gin.H{
+		"type": h.cfg.Database.Type,
+	}
+
+	if h.cfg.Database.Type == "sqlite" {
+		dbInfo["path"] = h.cfg.Database.SQLite.Path
+	} else if h.cfg.Database.Type == "mariadb" {
+		dbInfo["host"] = h.cfg.Database.MariaDB.Host
+		dbInfo["port"] = h.cfg.Database.MariaDB.Port
+		dbInfo["database"] = h.cfg.Database.MariaDB.Database
+		dbInfo["username"] = h.cfg.Database.MariaDB.Username
+	}
+
 	// Get system information
 	systemInfo := gin.H{
-		"database_type": h.cfg.Database.Type,
-		"server_port":   h.cfg.Server.Port,
-		"app_version":   h.cfg.App.Version,
+		"app_version":      h.cfg.App.Version,
+		"build_date":       c.MustGet("BuildDate"),
+		"build_time":       c.MustGet("BuildTime"),
+		"database_type":    h.cfg.Database.Type,
+		"database_info":    dbInfo,
+		"schema_version":   schemaVersion,
+		"migrations_count": migrationCount,
+		"server_host":      h.cfg.Server.Host,
+		"server_port":      h.cfg.Server.Port,
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -1312,6 +1346,85 @@ func (h *Handlers) UpdateSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":     "Settings updated successfully",
 		"preferences": preferences,
+	})
+}
+
+// GetMigrationStatus returns detailed migration information
+func (h *Handlers) GetMigrationStatus(c *gin.Context) {
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Get all migrations from schema_migrations table
+	var migrations []models.SchemaMigration
+	if err := h.db.Order("version ASC").Find(&migrations).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load migration history"})
+		return
+	}
+
+	// Format migration data
+	migrationList := make([]gin.H, 0, len(migrations))
+	for _, m := range migrations {
+		migrationList = append(migrationList, gin.H{
+			"version":    m.Version,
+			"name":       m.Name,
+			"applied_at": m.AppliedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	// Get latest migration
+	var latestVersion string
+	if len(migrations) > 0 {
+		latestVersion = migrations[len(migrations)-1].Version
+	} else {
+		latestVersion = "None"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"migrations":      migrationList,
+		"total_count":     len(migrations),
+		"latest_version":  latestVersion,
+		"database_type":   h.cfg.Database.Type,
+	})
+}
+
+// ExportDatabaseBackup triggers a database export
+func (h *Handlers) ExportDatabaseBackup(c *gin.Context) {
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Generate filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	filename := fmt.Sprintf("WL%s.json", timestamp)
+	filepath := filepath.Join("backups", filename)
+
+	// Create backups directory if it doesn't exist
+	if err := os.MkdirAll("backups", 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create backup directory"})
+		return
+	}
+
+	// Export database
+	if err := database.ExportData(h.db, filepath, h.cfg.Database.Type); err != nil {
+		logging.Error().Err(err).Str("file", filepath).Msg("Backup export failed")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to export database backup",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	logging.Info().Str("file", filepath).Msg("Database backup created successfully")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Database backup created successfully",
+		"filename": filename,
+		"path":     filepath,
 	})
 }
 

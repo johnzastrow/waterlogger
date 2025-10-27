@@ -1,7 +1,7 @@
 # Waterlogger TODO List
 
 **Last Updated:** 2025-10-26
-**Version:** 1.3.0
+**Version:** 1.4.0
 **Status:** Core functionality complete, logging system complete, production features incomplete
 
 ---
@@ -54,7 +54,7 @@
 
 October 26, 2025 Testing: 
 
-1. The version tag that appears in the bottom-right corner of the UI should be updated to  the current version shown in the CHANGELOG.md (1.3.0). However, right now it shows "v | Built on 2025-10-26 at 22:02:00" and it should show "v1.3.0 | Built on 2025-10-26 at 22:02:00".
+1. The version tag that appears in the bottom-right corner of the UI should be updated to  the current version shown in the CHANGELOG.md (1.4.0). However, right now it shows "v | Built on 2025-10-27" and it should show "v1.4.0 | Built on 2025-10-27".
 2. Finishing checking the documentation to reflect the current build approaches, particularly for Windows with MSYS2 and MinGW-w64 GCC and on linux.
 3. Check the README instructions for setting up systemd on Linux. The example service file has issues.
 4. 

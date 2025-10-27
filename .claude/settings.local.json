@@ -6,7 +6,10 @@
       "Bash(./build.sh:*)",
       "Bash(./waterlogger:*)",
       "Bash(timeout 10 ./waterlogger:*)",
-      "Bash(timeout 5 ./waterlogger:*)"
+      "Bash(timeout 5 ./waterlogger:*)",
+      "Read(//usr/**)",
+      "Bash(curl:*)",
+      "Bash(kill:*)"
     ],
     "deny": [],
     "ask": []

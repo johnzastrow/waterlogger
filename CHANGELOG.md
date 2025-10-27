@@ -16,6 +16,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - TBD
 
+## [1.4.0] - 2025-10-27
+
+### Added - Database Schema Migration System & Enhanced Settings UI
+
+#### Schema Migration System
+- **Version-tracked schema migrations** for managing database structure changes
+- **SchemaMigration model** to track applied migrations with version, name, and timestamp
+- **Migration interface** with Up() and Down() methods for applying and reverting changes
+- **Automatic migration execution** on application startup
+- **Migration registry** for centralized migration management
+- **Transaction-wrapped migrations** for atomicity (all-or-nothing execution)
+- **Command-line migration tools**:
+  - `-migration-status` - View all applied migrations
+  - `-migration-rollback` - Revert the last migration
+- **Cross-database support** - Works with both SQLite and MariaDB
+- **Migration documentation** (MIGRATIONS.md) with comprehensive examples and best practices
+
+#### Enhanced Settings UI
+- **System Information section** displaying:
+  - Application version
+  - Build date and time
+  - Database type (SQLite/MariaDB)
+  - Current schema version
+  - Total migrations applied
+  - Server host and port
+- **Database Schema Migrations section** with:
+  - Complete migration history table
+  - Refresh capability for latest status
+  - Applied date/time for each migration
+  - Command-line instructions for advanced operations
+- **Database Management section** with:
+  - Current database connection details (sanitized)
+  - One-click database backup creation
+  - Auto-generated timestamped backup files (WL<timestamp>.json)
+  - Database migration instructions (SQLite ↔ MariaDB)
+  - Safety warnings and documentation links
+- **User-friendly interface** with loading states, success messages, and error handling
+
+#### API Endpoints
+- `GET /api/settings/migrations` - Retrieve migration history
+- `POST /api/settings/backup` - Create database backup on demand
+- Enhanced `GET /api/settings` - Returns comprehensive system information
+
+### Changed
+- **GetSettings API** now includes schema version, migration count, and database details
+- **Settings page** completely redesigned with organized sections
+- **Database initialization** now uses migration system instead of simple AutoMigrate
+- **Foreign key validation** enhanced in data migration to handle all relationships
+
+### Technical Details
+- Migration system uses GORM for database operations
+- Migrations tracked in `schema_migrations` table
+- Backups stored in dedicated `backups/` directory
+- All migration operations logged with structured logging
+- Migration runner supports pending migration detection
+- Rollback validation prevents reverting other developers' changes
+
 ## [1.3.0] - 2025-10-26
 
 ### Added - Comprehensive Logging System

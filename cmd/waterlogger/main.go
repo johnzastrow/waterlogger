@@ -54,7 +54,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Println("Waterlogger v1.3.0")
+		fmt.Println("Waterlogger v1.4.0")
 		os.Exit(0)
 	}
 
@@ -334,7 +334,9 @@ func setupRoutes(router *gin.Engine, h *handlers.Handlers) {
 		// Settings
 		api.GET("/settings", h.GetSettings)
 		api.POST("/settings", h.UpdateSettings)
-		
+		api.GET("/settings/migrations", h.GetMigrationStatus)
+		api.POST("/settings/backup", h.ExportDatabaseBackup)
+
 		// Unit conversion
 		api.POST("/convert", h.ConvertUnits)
 		

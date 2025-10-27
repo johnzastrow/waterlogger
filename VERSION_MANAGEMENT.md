@@ -4,7 +4,7 @@
 
 **Repository:** https://github.com/johnzastrow/waterlogger
 
-### Current Version: 1.3.0
+### Current Version: 1.4.0
 
 ---
 
@@ -13,14 +13,14 @@
 ### ALWAYS increment the version when making code changes:
 
 - **MAJOR (X.0.0)** - Breaking changes or incompatible API changes
-  - Example: 1.3.0 → 2.0.0
+  - Example: 1.4.0 → 2.0.0
 
 - **MINOR (X.Y.0)** - New features (backward compatible)
-  - Example: 1.3.0 → 1.4.0
+  - Example: 1.4.0 → 1.5.0
   - Use this for: New features, significant enhancements, new middleware, new packages
 
 - **PATCH (X.Y.Z)** - Bug fixes (backward compatible)
-  - Example: 1.3.0 → 1.3.1
+  - Example: 1.4.0 → 1.4.1
   - Use this for: Bug fixes, typo corrections, small improvements, documentation updates
 
 ### When NOT to bump version:
@@ -39,8 +39,8 @@ When making code changes, follow these steps IN ORDER:
 Based on the type of change (MAJOR/MINOR/PATCH), determine the new version.
 
 Example:
-- Adding new feature → Increment MINOR: 1.3.0 → 1.4.0
-- Fixing bug → Increment PATCH: 1.3.0 → 1.3.1
+- Adding new feature → Increment MINOR: 1.4.0 → 1.5.0
+- Fixing bug → Increment PATCH: 1.4.0 → 1.4.1
 - Breaking change → Increment MAJOR: 1.3.0 → 2.0.0
 
 ---
