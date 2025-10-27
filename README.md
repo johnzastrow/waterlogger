@@ -53,20 +53,25 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 
 #### Option 2: Build from Source
 
+**⚠️ Prerequisites:** SQLite requires CGO (C compiler). See detailed build requirements below.
+
 ```bash
 # Clone the repository
 git clone https://github.com/johnzastrow/waterlogger.git
 cd waterlogger
 
-# Build with build timestamps (recommended)
-./build.sh
+# Install build tools first (see platform-specific instructions below)
 
-# Or build manually
-go build -o waterlogger cmd/waterlogger/main.go
+# Build using the build script (recommended)
+./build.sh      # Linux/macOS
+build.bat       # Windows
 
 # Run the application
-./waterlogger
+./waterlogger         # Linux/macOS
+waterlogger.exe       # Windows
 ```
+
+See the **Building and Running** section below for platform-specific setup instructions.
 
 ### First Run
 
@@ -132,7 +137,22 @@ sc start Waterlogger
 
 #### Prerequisites
 - Go 1.21 or later
+- **Build tools** (gcc, make - usually pre-installed)
 - Git (optional, for cloning)
+
+**⚠️ Important:** Waterlogger uses SQLite which requires CGO (C bindings).
+
+#### Quick Setup
+```bash
+# Install build tools (if not already installed)
+# Ubuntu/Debian:
+sudo apt install build-essential
+
+# Fedora/RHEL:
+sudo dnf groupinstall "Development Tools"
+```
+
+See [BUILD_REQUIREMENTS.md](BUILD_REQUIREMENTS.md) for detailed instructions.
 
 #### Build Steps
 ```bash
@@ -141,16 +161,11 @@ git clone https://github.com/johnzastrow/waterlogger.git
 cd waterlogger
 
 # Download dependencies
-go mod tidy
+go mod download
 
-# Build with timestamps (recommended)
+# Build using the provided script (recommended)
+chmod +x build.sh
 ./build.sh
-
-# Or build manually
-go build -o waterlogger cmd/waterlogger/main.go
-
-# Make executable
-chmod +x waterlogger
 
 # Run the application
 ./waterlogger
@@ -197,21 +212,23 @@ sudo systemctl status waterlogger
 
 ### Cross-Platform Building
 
-Build for multiple platforms with timestamps:
+**⚠️ Important:** Cross-compiling with CGO is complex because SQLite requires platform-specific C compilers.
 
+**Recommended approach:** Build on the target platform using the provided build scripts:
+- **Windows:** Use `build.bat` with MSYS2 installed
+- **Linux:** Use `build.sh` with build-essential installed
+- **macOS:** Use `build.sh` with Xcode Command Line Tools installed
+
+**For cross-compilation**, see [BUILD_REQUIREMENTS.md](BUILD_REQUIREMENTS.md) for detailed instructions on setting up cross-compilers.
+
+Example for Linux → Windows (requires mingw-w64 cross-compiler):
 ```bash
-# Set build timestamp variables
-BUILD_TIME=$(date '+%H:%M:%S')
-BUILD_DATE=$(date '+%Y-%m-%d')
+# Install cross-compiler on Linux
+sudo apt install gcc-mingw-w64
 
-# Build for Windows (from any platform)
-GOOS=windows GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
-
-# Build for Linux (from any platform)
-GOOS=linux GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger cmd/waterlogger/main.go
-
-# Build for macOS (from any platform)
-GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger-mac cmd/waterlogger/main.go
+# Cross-compile for Windows
+CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc \
+  go build -o waterlogger.exe ./cmd/waterlogger
 ```
 
 ### Build Timestamps
@@ -227,20 +244,19 @@ The application includes build timestamp functionality that displays when the bi
 
 **Linux/macOS:**
 ```bash
-# Use the provided build script
+# Use the provided build script (recommended)
 ./build.sh
-
-# Or manually
-BUILD_TIME=$(date '+%H:%M:%S') BUILD_DATE=$(date '+%Y-%m-%d') \
-go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger cmd/waterlogger/main.go
 ```
 
-**Windows PowerShell:**
-```powershell
-$BUILD_TIME = Get-Date -Format "HH:mm:ss"
-$BUILD_DATE = Get-Date -Format "yyyy-MM-dd"
-go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
+The build script automatically sets CGO_ENABLED=1 and injects build timestamps.
+
+**Windows:**
+```cmd
+# Use the provided build script (recommended)
+build.bat
 ```
+
+The build script automatically sets CGO_ENABLED=1, checks for GCC, and injects build timestamps.
 
 ## Configuration
 

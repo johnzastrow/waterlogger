@@ -53,7 +53,10 @@ Feature requests are welcome! Please provide:
 
 - Go 1.21 or later
 - Git
-- SQLite (included with Go)
+- **C compiler (GCC)** - Required for SQLite/CGO:
+  - **Windows:** MSYS2 with MinGW-w64 (see [BUILD_REQUIREMENTS.md](BUILD_REQUIREMENTS.md))
+  - **Linux:** build-essential package
+  - **macOS:** Xcode Command Line Tools
 - MariaDB (optional, for testing)
 
 ### Local Development
@@ -64,13 +67,19 @@ git clone https://github.com/your-username/waterlogger.git
 cd waterlogger
 
 # Download dependencies
-go mod tidy
+go mod download
 
 # Run tests
 go test ./...
 
-# Build the application
-go build -o waterlogger cmd/waterlogger/main.go
+# Build the application using the build script (recommended)
+./build.sh           # Linux/macOS
+build.bat            # Windows
+
+# Or build manually (ensure CGO_ENABLED=1)
+export CGO_ENABLED=1  # Linux/macOS
+set CGO_ENABLED=1     # Windows
+go build -o waterlogger ./cmd/waterlogger
 
 # Run the application
 ./waterlogger
