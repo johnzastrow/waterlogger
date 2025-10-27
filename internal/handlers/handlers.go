@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"waterlogger/internal/adjustments"
@@ -1425,6 +1426,70 @@ func (h *Handlers) ExportDatabaseBackup(c *gin.Context) {
 		"message":  "Database backup created successfully",
 		"filename": filename,
 		"path":     filepath,
+	})
+}
+
+// ImportDatabaseBackup restores database from uploaded backup file
+func (h *Handlers) ImportDatabaseBackup(c *gin.Context) {
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Get uploaded file
+	file, err := c.FormFile("backup")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+
+	// Validate file extension
+	if !strings.HasSuffix(strings.ToLower(file.Filename), ".json") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Only .json files are supported"})
+		return
+	}
+
+	// Create temporary directory if it doesn't exist
+	if err := os.MkdirAll("temp", 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temporary directory"})
+		return
+	}
+
+	// Save uploaded file to temporary location
+	timestamp := time.Now().Format("20060102_150405")
+	tempPath := filepath.Join("temp", fmt.Sprintf("import_%s.json", timestamp))
+
+	if err := c.SaveUploadedFile(file, tempPath); err != nil {
+		logging.Error().Err(err).Str("file", tempPath).Msg("Failed to save uploaded file")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
+		return
+	}
+
+	// Ensure cleanup of temporary file
+	defer func() {
+		if err := os.Remove(tempPath); err != nil {
+			logging.Warn().Err(err).Str("path", tempPath).Msg("Failed to remove temporary import file")
+		}
+	}()
+
+	// Import data from backup
+	logging.Info().Str("file", file.Filename).Msg("Starting database import")
+
+	if err := database.ImportData(h.db, tempPath); err != nil {
+		logging.Error().Err(err).Str("file", file.Filename).Msg("Database import failed")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to import database backup",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	logging.Info().Str("file", file.Filename).Msg("Database import completed successfully")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Database backup imported successfully",
+		"filename": file.Filename,
 	})
 }
 

@@ -161,6 +161,7 @@
             </div>
 
             <div class="data-actions">
+                <h4>Backup Database</h4>
                 <button @click="createBackup()" class="btn btn-primary" :disabled="backupLoading">
                     <span x-show="!backupLoading">💾 Create Database Backup</span>
                     <span x-show="backupLoading">Creating Backup...</span>
@@ -174,6 +175,43 @@
                 <p><strong>Backup Created Successfully!</strong></p>
                 <p>File: <code x-text="backupInfo?.filename"></code></p>
                 <p>Location: <code x-text="backupInfo?.path"></code></p>
+            </div>
+
+            <div class="data-actions" style="margin-top: 2rem;">
+                <h4>Restore from Backup</h4>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                    Upload a JSON backup file to restore your database. This will import all data from the backup.
+                </p>
+                <div class="warning-box" style="margin-bottom: 1rem;">
+                    <p><strong>⚠️ Warning:</strong> Importing a backup will add data to your current database. Make sure to backup your current data first!</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <input
+                        type="file"
+                        id="backupFileInput"
+                        accept=".json"
+                        @change="handleFileSelect($event)"
+                        style="flex: 1; min-width: 200px;"
+                    />
+                    <button
+                        @click="importBackup()"
+                        class="btn btn-primary"
+                        :disabled="!selectedFile || importLoading"
+                        style="white-space: nowrap;"
+                    >
+                        <span x-show="!importLoading">📥 Import Backup</span>
+                        <span x-show="importLoading">Importing...</span>
+                    </button>
+                </div>
+                <p x-show="selectedFile" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+                    Selected file: <strong x-text="selectedFile?.name"></strong>
+                </p>
+            </div>
+
+            <div x-show="importInfo" class="success-box" style="margin-top: 1rem;">
+                <p><strong>Import Completed Successfully!</strong></p>
+                <p>File: <code x-text="importInfo?.filename"></code></p>
+                <p style="margin-top: 0.5rem;">The database has been updated with data from the backup.</p>
             </div>
 
             <div class="info-box" style="margin-top: 1.5rem;">
@@ -340,6 +378,9 @@
             migrationsLoading: false,
             backupLoading: false,
             backupInfo: null,
+            importLoading: false,
+            importInfo: null,
+            selectedFile: null,
             loading: false,
             message: '',
             error: '',
@@ -446,6 +487,71 @@
             async exportData() {
                 this.message = 'Redirecting to export page...';
                 window.location.href = '/export';
+            },
+
+            handleFileSelect(event) {
+                const files = event.target.files;
+                if (files && files.length > 0) {
+                    this.selectedFile = files[0];
+                    this.importInfo = null;
+                    this.error = '';
+                    this.message = '';
+                } else {
+                    this.selectedFile = null;
+                }
+            },
+
+            async importBackup() {
+                if (!this.selectedFile) {
+                    this.error = 'Please select a backup file first';
+                    return;
+                }
+
+                this.importLoading = true;
+                this.importInfo = null;
+                this.message = '';
+                this.error = '';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('backup', this.selectedFile);
+
+                    const response = await fetch('/api/settings/import', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin'
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        this.importInfo = data;
+                        this.message = 'Backup imported successfully!';
+
+                        // Clear the file input
+                        this.selectedFile = null;
+                        document.getElementById('backupFileInput').value = '';
+
+                        // Reload settings and migrations to show updated data
+                        await this.loadSettings();
+                        await this.loadMigrations();
+
+                        // Clear success message after 10 seconds
+                        setTimeout(() => {
+                            this.message = '';
+                            this.importInfo = null;
+                        }, 10000);
+                    } else {
+                        this.error = data.error || 'Failed to import backup';
+                        if (data.details) {
+                            this.error += ': ' + data.details;
+                        }
+                    }
+                } catch (err) {
+                    this.error = 'Network error: ' + err.message;
+                } finally {
+                    this.importLoading = false;
+                }
             },
 
             // User management methods
@@ -615,7 +721,7 @@
 
     <footer class="build-info">
         <small>
-            <a href="https://github.com/johnzastrow/waterlogger/blob/main/CHANGELOG.md#140---2025-10-27" target="_blank" title="View changelog">v{{.Version}}</a>
+            <a href="https://github.com/johnzastrow/waterlogger/blob/main/CHANGELOG.md#150---2025-10-27" target="_blank" title="View changelog">v{{.Version}}</a>
             <span class="separator">|</span>
             Built on {{.BuildDate}} at {{.BuildTime}}
         </small>

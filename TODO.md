@@ -1,8 +1,8 @@
 # Waterlogger TODO List
 
 **Last Updated:** 2025-10-27
-**Version:** 1.4.0
-**Status:** Core functionality complete, logging system complete, schema migrations complete, production features incomplete
+**Version:** 1.5.0
+**Status:** Core functionality complete, logging system complete, schema migrations complete, backup import complete, automated deployment complete, production features incomplete
 
 ---
 
@@ -88,6 +88,32 @@
 - [x] Foreign key relationship validation
 - [x] Tested with sample databases
 - [x] Documentation in README.md and BUILD_REQUIREMENTS.md
+
+### Web-Based Backup Import (v1.5)
+- [x] File upload interface in Settings page
+- [x] JSON file validation (.json only)
+- [x] New API endpoint (`POST /api/settings/import`)
+- [x] Multipart form-data file upload handling
+- [x] Temporary file management with auto-cleanup
+- [x] Real-time import progress with loading states
+- [x] Success/error messages with detailed feedback
+- [x] Automatic page refresh after import
+- [x] Backwards compatibility with older backups
+- [x] Auto-schema migration during import
+- [x] Foreign key validation and fixing
+- [x] Graceful handling of missing fields
+- [x] CSS styling for message boxes (success, warning, info)
+- [x] User warnings about data being added (not replaced)
+
+### Automated Deployment (v1.4-1.5)
+- [x] Linux deployment script (`deploy-linux.sh`)
+- [x] Windows deployment script (`deploy-windows.bat`)
+- [x] Enhanced systemd service file with security hardening
+- [x] Windows service with auto-restart configuration
+- [x] Production configuration prompts
+- [x] Directory structure creation (`logs/`, `backups/`)
+- [x] User/permission management
+- [x] Comprehensive deployment documentation
 
 ---
 

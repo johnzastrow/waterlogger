@@ -403,7 +403,24 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - **Documentation Updates**: Added LOGGING.md with comprehensive logging documentation
 - **Build System Enhancements**: MSYS2 build instructions for Windows
 
-#### Version 1.4 Features (Current Session)
+#### Version 1.5 Features (Current Session)
+- **Web-Based Backup Import**: Complete backup restore functionality from Settings page
+  - File upload interface for JSON backups
+  - Validation of file type (.json only)
+  - Real-time import progress with loading states
+  - Success/error messages with detailed feedback
+  - Automatic refresh of settings and migrations after import
+  - **Backwards compatibility**: Imports data from older versions gracefully
+    - Auto-updates database schema if needed
+    - Foreign key validation and automatic fixing
+    - Skips missing or incompatible fields without failing
+    - Handles partial imports when some data is unavailable
+  - **New API endpoint**: `POST /api/settings/import` - Import database from uploaded backup
+  - **CSS styling** for message boxes (success, warning, info boxes)
+  - Warning about data being added (not replaced)
+  - Automatic cleanup of uploaded temporary files
+
+#### Version 1.4 Features
 - **Schema Migration System**: Version-tracked database schema changes with automatic migration on startup
   - `SchemaMigration` model tracks version, name, and timestamp
   - Migration interface with Up() and Down() methods

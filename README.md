@@ -25,6 +25,7 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 - **Schema Migration System**: Version-tracked database schema changes with automatic migration on startup
 - **Migration Management UI**: View complete migration history and status from the settings page
 - **One-Click Database Backups**: Create timestamped JSON backups directly from the web interface
+- **Web-Based Backup Import** (Version 1.5+): Upload and restore JSON backups through the Settings page with backwards compatibility
 - **Migration Commands**: Command-line tools for viewing status and rolling back migrations
 - **Cross-Database Migration**: Bidirectional data migration between SQLite and MariaDB
 - **Enhanced Settings UI**: Comprehensive system information display including app version, build info, database type, and schema version

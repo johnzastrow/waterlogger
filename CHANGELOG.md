@@ -16,6 +16,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - TBD
 
+## [1.5.0] - 2025-10-27
+
+### Added - Database Backup Import & Automated Deployment
+
+#### Database Backup Import Feature
+- **Web-based backup import** from Settings page
+  - File upload interface for JSON backup files
+  - Validation of file type (.json only)
+  - Real-time import progress with loading states
+  - Success/error messages with detailed feedback
+  - Automatic refresh of settings and migrations after import
+- **Backwards compatibility handling**
+  - Imports data from older system versions gracefully
+  - Auto-updates database schema if needed
+  - Foreign key validation and automatic fixing
+  - Skips missing or incompatible fields without failing
+  - Handles partial imports when some data is unavailable
+- **User experience enhancements**
+  - Warning about data being added (not replaced)
+  - Clear file selection feedback
+  - Automatic cleanup of uploaded files
+  - 10-second auto-dismiss of success messages
+- **New API endpoint**: `POST /api/settings/import` - Import database from uploaded backup file
+- **CSS styling** for message boxes (success, warning, info)
+
+#### Automated Deployment Scripts
+- **Linux deployment script** (`deploy-linux.sh`) for one-command systemd service installation
+  - Creates installation directory structure (`/opt/waterlogger`, `logs/`, `backups/`)
+  - Creates dedicated `waterlogger` user with proper permissions
+  - Optional production configuration (json logging, file output)
+  - Generates systemd service file with security hardening
+  - Auto-enables service to start on boot
+- **Windows deployment script** (`deploy-windows.bat`) for one-command Windows service installation
+  - Creates installation directory structure (`C:\Program Files\Waterlogger`, `logs/`, `backups/`)
+  - Optional production configuration
+  - Creates Windows service with automatic restart on failure
+  - Includes service management commands
+- **Enhanced systemd service file** with:
+  - Security hardening (NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp)
+  - Proper working directory and read-write paths
+  - Journald integration with SyslogIdentifier
+  - Restart policy with 10-second delay
+  - Documentation link
+- **Comprehensive deployment documentation** in README.md
+  - Quick deployment (automated) and manual deployment options
+  - Production configuration recommendations
+  - Log viewing instructions
+  - Service management commands
+
+### Changed
+- **Settings page** redesigned with "Backup Database" and "Restore from Backup" sections
+- **Database Management section** now includes both backup creation and import capabilities
+- **Deployment process** significantly simplified with automated scripts
+
+### Technical Details
+- Import uses existing `database.ImportData()` function with enhanced error handling
+- Temporary file handling with automatic cleanup
+- File upload via multipart/form-data
+- Frontend uses FormData API for file upload
+- Imports data in correct order respecting foreign key constraints
+
 ## [1.4.0] - 2025-10-27
 
 ### Added - Database Schema Migration System & Enhanced Settings UI
