@@ -262,18 +262,31 @@ The build script automatically sets CGO_ENABLED=1, checks for GCC, and injects b
 
 ### Configuration File
 
-The application uses a YAML configuration file (`config.yaml`) with the following structure:
+The application uses a YAML configuration file (`config.yaml`). A fully commented example configuration is provided in `config.example.yaml`.
 
+**First-time setup:**
+```bash
+cp config.example.yaml config.yaml
+# Edit config.yaml with your settings
+```
+
+The `config.example.yaml` file includes detailed comments explaining:
+- Server settings (port, host)
+- **Database configuration** (SQLite vs MariaDB with complete setup instructions)
+- Application settings (secret key generation)
+- Logging options (levels, formats, rotation)
+
+**Basic configuration structure:**
 ```yaml
 server:
-  port: 2342
-  host: "localhost"
+  port: 2342              # Web server port
+  host: "localhost"       # Bind address
 
 database:
-  type: "sqlite" # sqlite or mariadb
+  type: "sqlite"          # "sqlite" or "mariadb"
   sqlite:
     path: "waterlogger.db"
-  mariadb:
+  mariadb:                # See config.example.yaml for setup instructions
     host: "localhost"
     port: 3306
     username: "waterlogger"
@@ -282,9 +295,17 @@ database:
 
 app:
   name: "Waterlogger"
-  version: "1.2.0"
-  secret_key: "your-secret-key-change-this"
+  version: "1.3.0"
+  secret_key: "change-this-to-a-secure-random-string"
+
+logging:
+  level: "info"           # debug, info, warn, error, fatal
+  format: "console"       # json, console
+  output: "both"          # stdout, file, both
+  # ... see config.example.yaml for full logging options
 ```
+
+**For detailed MariaDB setup and migration instructions, see the comments in `config.example.yaml`.**
 
 ### Server Configuration
 
@@ -504,21 +525,92 @@ echo "newpassword" | ./waterlogger -reset-password username
 ### Database Setup
 
 #### SQLite (Default)
-- No additional setup required
-- Database file is created automatically
-- Recommended for single-user or small deployments
+- **No additional setup required** - database file is created automatically
+- Single file storage: `waterlogger.db` (configurable in `config.yaml`)
+- Requires CGO (C compiler) to build the application
+- Perfect for:
+  - Single-user deployments
+  - Small to medium datasets
+  - Simple backup/restore (just copy the .db file)
+  - No separate database server needed
 
-#### MariaDB
-1. Install MariaDB server
-2. Create database and user:
-```sql
-CREATE DATABASE waterlogger;
-CREATE USER 'waterlogger'@'localhost' IDENTIFIED BY 'your-password';
-GRANT ALL PRIVILEGES ON waterlogger.* TO 'waterlogger'@'localhost';
-FLUSH PRIVILEGES;
+#### MariaDB (Optional)
+**When to use MariaDB:**
+- Multi-user environments with concurrent access
+- Large datasets (thousands of samples)
+- Remote database server requirements
+- Better performance for complex queries
+
+**Setup Instructions:**
+
+1. **Install MariaDB Server**
+   ```bash
+   # Ubuntu/Debian
+   sudo apt install mariadb-server
+
+   # Windows: Download from https://mariadb.org/download/
+   # macOS
+   brew install mariadb
+   ```
+
+2. **Create Database and User**
+   ```bash
+   # Login to MariaDB as root
+   mysql -u root -p
+   ```
+
+   Then run these SQL commands:
+   ```sql
+   CREATE DATABASE waterlogger;
+   CREATE USER 'waterlogger'@'localhost' IDENTIFIED BY 'your-secure-password';
+   GRANT ALL PRIVILEGES ON waterlogger.* TO 'waterlogger'@'localhost';
+   FLUSH PRIVILEGES;
+   EXIT;
+   ```
+
+3. **Update Configuration**
+
+   Edit `config.yaml` and change the database type:
+   ```yaml
+   database:
+     type: "mariadb"  # Changed from "sqlite"
+     mariadb:
+       host: "localhost"
+       port: 3306
+       username: "waterlogger"
+       password: "your-secure-password"  # Use the password from step 2
+       database: "waterlogger"
+   ```
+
+   See `config.example.yaml` for detailed configuration comments.
+
+4. **Migrate Existing SQLite Data (Optional)**
+
+   If you have existing data in SQLite and want to move it to MariaDB:
+   ```bash
+   # After updating config.yaml to MariaDB settings
+   ./waterlogger -migrate-to-mariadb
+   ```
+
+   This will:
+   - Export all data from your SQLite database
+   - Create tables in MariaDB
+   - Import all data to MariaDB
+   - Preserve all relationships and data integrity
+
+5. **Start the Application**
+   ```bash
+   ./waterlogger
+   ```
+
+   The application will now use MariaDB for all data storage.
+
+**Migrating Back to SQLite:**
+```bash
+# Update config.yaml to use type: "sqlite"
+# Then run:
+./waterlogger -migrate-to-sqlite
 ```
-3. Update configuration file with connection details
-4. Restart the application
 
 ## Usage
 
