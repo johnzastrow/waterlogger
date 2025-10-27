@@ -317,10 +317,8 @@ This script will:
    ```
 
 3. **Create systemd service file:**
-
-    ```bash
-   sudo tee /etc/systemd/system/waterlogger.service > /dev/null <<'EOF'
-    
+<pre>
+sudo tee /etc/systemd/system/waterlogger.service > /dev/null <<'EOF' 
 [Unit]
 Description=Waterlogger - Pool and Hot Tub Water Management System
 After=network.target
@@ -360,7 +358,7 @@ ReadWritePaths=/opt/waterlogger
 [Install]
 WantedBy=multi-user.target
 EOF
-   ```
+</pre>
 
 4. **Enable and start the service:**
    ```bash
