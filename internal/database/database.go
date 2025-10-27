@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"waterlogger/internal/config"
+	"waterlogger/internal/database/migrations"
 	"waterlogger/internal/logging"
 	"waterlogger/internal/models"
 
@@ -67,21 +68,22 @@ func NewDB(cfg *config.Config) (*DB, error) {
 		return nil, fmt.Errorf("unsupported database type: %s", cfg.Database.Type)
 	}
 
-	// Auto-migrate the schema
+	// Run schema migrations
 	logging.Info().Msg("Running database migrations")
-	if err := db.AutoMigrate(
-		&models.User{},
-		&models.UserPreferences{},
-		&models.Pool{},
-		&models.Kit{},
-		&models.Sample{},
-		&models.Measurements{},
-		&models.Indices{},
-		&models.Adjustment{},
-	); err != nil {
-		logging.Error().Err(err).Msg("Failed to auto-migrate schema")
-		return nil, fmt.Errorf("failed to auto-migrate schema: %w", err)
+
+	// Initialize migration system
+	migrationRunner := migrations.GetMigrationRunner(db)
+	if err := migrationRunner.Initialize(); err != nil {
+		logging.Error().Err(err).Msg("Failed to initialize migration system")
+		return nil, fmt.Errorf("failed to initialize migration system: %w", err)
 	}
+
+	// Run pending migrations
+	if err := migrationRunner.RunPendingMigrations(); err != nil {
+		logging.Error().Err(err).Msg("Failed to run migrations")
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+
 	logging.Info().Msg("Database migrations completed successfully")
 
 	return &DB{db}, nil

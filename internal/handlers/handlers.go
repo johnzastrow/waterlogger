@@ -39,6 +39,7 @@ func NewHandlers(db *gorm.DB, cfg *config.Config) *Handlers {
 func (h *Handlers) SetupWizardPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "setup.html", gin.H{
 		"title": "Setup Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -161,6 +162,7 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 func (h *Handlers) LoginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", gin.H{
 		"title": "Login - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -204,6 +206,7 @@ func (h *Handlers) LogoutAPI(c *gin.Context) {
 func (h *Handlers) Dashboard(c *gin.Context) {
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"title": "Dashboard - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -213,6 +216,7 @@ func (h *Handlers) Dashboard(c *gin.Context) {
 func (h *Handlers) PoolsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "pools.html", gin.H{
 		"title": "Pools - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -221,6 +225,7 @@ func (h *Handlers) PoolsPage(c *gin.Context) {
 func (h *Handlers) KitsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "kits.html", gin.H{
 		"title": "Test Kits - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -295,6 +300,7 @@ func (h *Handlers) DeletePool(c *gin.Context) {
 func (h *Handlers) SamplesPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "samples.html", gin.H{
 		"title": "Samples - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -494,6 +500,7 @@ func (h *Handlers) DeleteSample(c *gin.Context) {
 func (h *Handlers) ExportPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "export.html", gin.H{
 		"title": "Export - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -502,6 +509,7 @@ func (h *Handlers) ExportPage(c *gin.Context) {
 func (h *Handlers) SettingsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "settings.html", gin.H{
 		"title": "Settings - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -510,6 +518,7 @@ func (h *Handlers) SettingsPage(c *gin.Context) {
 func (h *Handlers) AdjustmentsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "adjustments.html", gin.H{
 		"title": "Chemical Adjustments - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})

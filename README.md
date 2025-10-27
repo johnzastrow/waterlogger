@@ -172,43 +172,73 @@ chmod +x build.sh
 ```
 
 #### Running as Linux Service (systemd)
-1. Copy the executable to `/usr/local/bin/waterlogger`
-2. Create a systemd service file:
 
-```bash
-sudo tee /etc/systemd/system/waterlogger.service > /dev/null <<EOF
-[Unit]
-Description=Waterlogger - Pool and Hot Tub Water Management System
-After=network.target
+1. **Create application directory and copy files:**
+   ```bash
+   # Create application directory
+   sudo mkdir -p /opt/waterlogger
 
-[Service]
-Type=simple
-User=waterlogger
-WorkingDirectory=/var/lib/waterlogger
-ExecStart=/usr/local/bin/waterlogger
-Restart=always
-RestartSec=10
+   # Copy the executable
+   sudo cp waterlogger /opt/waterlogger/
 
-[Install]
-WantedBy=multi-user.target
-EOF
-```
+   # Copy and configure config file
+   sudo cp config.yaml /opt/waterlogger/
+   sudo chmod 600 /opt/waterlogger/config.yaml
+   ```
 
-3. Enable and start the service:
-```bash
-# Create user and directory
-sudo useradd -r -s /bin/false waterlogger
-sudo mkdir -p /var/lib/waterlogger
-sudo chown waterlogger:waterlogger /var/lib/waterlogger
+2. **Create a dedicated user:**
+   ```bash
+   sudo useradd -r -s /bin/false waterlogger
+   sudo chown -R waterlogger:waterlogger /opt/waterlogger
+   ```
 
-# Enable and start service
-sudo systemctl daemon-reload
-sudo systemctl enable waterlogger
-sudo systemctl start waterlogger
+3. **Create systemd service file:**
+   ```bash
+   sudo tee /etc/systemd/system/waterlogger.service > /dev/null <<EOF
+   [Unit]
+   Description=Waterlogger - Pool and Hot Tub Water Management System
+   After=network.target
 
-# Check status
-sudo systemctl status waterlogger
-```
+   [Service]
+   Type=simple
+   User=waterlogger
+   Group=waterlogger
+   WorkingDirectory=/opt/waterlogger
+   Environment=GIN_MODE=release
+   ExecStart=/opt/waterlogger/waterlogger -config /opt/waterlogger/config.yaml
+   StandardOutput=journal
+   StandardError=journal
+   Restart=always
+   RestartSec=10
+
+   [Install]
+   WantedBy=multi-user.target
+   EOF
+   ```
+
+4. **Enable and start the service:**
+   ```bash
+   # Reload systemd to recognize new service
+   sudo systemctl daemon-reload
+
+   # Enable service to start on boot
+   sudo systemctl enable waterlogger
+
+   # Start the service now
+   sudo systemctl start waterlogger
+
+   # Check status
+   sudo systemctl status waterlogger
+   ```
+
+5. **View logs:**
+   ```bash
+   # Follow live logs
+   sudo journalctl -u waterlogger -f
+
+   # View recent logs
+   sudo journalctl -u waterlogger -n 100
+   ```
 
 ### Cross-Platform Building
 

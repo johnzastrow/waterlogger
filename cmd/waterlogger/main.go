@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 	"waterlogger/internal/config"
 	"waterlogger/internal/database"
+	"waterlogger/internal/database/migrations"
 	"waterlogger/internal/handlers"
 	"waterlogger/internal/logging"
 	"waterlogger/internal/middleware"
@@ -37,7 +38,9 @@ func main() {
 	var exportData string
 	var importData string
 	var resetPassword string
-	
+	var migrationStatus bool
+	var migrationRollback bool
+
 	flag.StringVar(&configPath, "config", "config.yaml", "Path to configuration file")
 	flag.BoolVar(&showVersion, "version", false, "Show version information")
 	flag.BoolVar(&showHelp, "help", false, "Show help information")
@@ -46,6 +49,8 @@ func main() {
 	flag.StringVar(&exportData, "export", "", "Export database data to backup file")
 	flag.StringVar(&importData, "import", "", "Import database data from backup file")
 	flag.StringVar(&resetPassword, "reset-password", "", "Reset password for specified username")
+	flag.BoolVar(&migrationStatus, "migration-status", false, "Show database migration status")
+	flag.BoolVar(&migrationRollback, "migration-rollback", false, "Rollback the last applied migration")
 	flag.Parse()
 
 	if showVersion {
@@ -63,8 +68,16 @@ func main() {
 		fmt.Println("  -config string           Path to configuration file (default: config.yaml)")
 		fmt.Println("  -version                 Show version information")
 		fmt.Println("  -help                    Show this help message")
+		fmt.Println()
+		fmt.Println("Database Migration:")
 		fmt.Println("  -migrate-to-mariadb      Migrate data from SQLite to MariaDB")
 		fmt.Println("  -migrate-to-sqlite       Migrate data from MariaDB to SQLite")
+		fmt.Println()
+		fmt.Println("Schema Migration:")
+		fmt.Println("  -migration-status        Show database schema migration status")
+		fmt.Println("  -migration-rollback      Rollback the last applied schema migration")
+		fmt.Println()
+		fmt.Println("Data Management:")
 		fmt.Println("  -export string           Export database data to backup file")
 		fmt.Println("  -import string           Import database data from backup file")
 		fmt.Println("  -reset-password string   Reset password for specified username")
@@ -161,6 +174,46 @@ func main() {
 			logging.Fatal().Err(err).Str("username", resetPassword).Msg("Password reset failed")
 		}
 		logging.Info().Str("username", resetPassword).Msg("Password reset completed successfully")
+		os.Exit(0)
+	}
+
+	// Handle schema migration commands
+	if migrationStatus {
+		logging.Info().Msg("Showing migration status")
+		migrationRunner := migrations.GetMigrationRunner(db.DB)
+		if err := migrationRunner.Initialize(); err != nil {
+			logging.Fatal().Err(err).Msg("Failed to initialize migration system")
+		}
+
+		status, err := migrationRunner.GetMigrationStatus()
+		if err != nil {
+			logging.Fatal().Err(err).Msg("Failed to get migration status")
+		}
+
+		fmt.Println("\nDatabase Migration Status:")
+		fmt.Println("==========================")
+		for _, s := range status {
+			appliedStr := "[ ]"
+			if s.Applied {
+				appliedStr = "[✓]"
+			}
+			fmt.Printf("%s %s - %s\n", appliedStr, s.Version, s.Name)
+		}
+		fmt.Println()
+		os.Exit(0)
+	}
+
+	if migrationRollback {
+		logging.Info().Msg("Rolling back last migration")
+		migrationRunner := migrations.GetMigrationRunner(db.DB)
+		if err := migrationRunner.Initialize(); err != nil {
+			logging.Fatal().Err(err).Msg("Failed to initialize migration system")
+		}
+
+		if err := migrationRunner.Rollback(); err != nil {
+			logging.Fatal().Err(err).Msg("Rollback failed")
+		}
+		logging.Info().Msg("Rollback completed successfully")
 		os.Exit(0)
 	}
 

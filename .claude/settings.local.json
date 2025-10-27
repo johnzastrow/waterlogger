@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(sqlite3:*)",
+      "Bash(./build.sh:*)",
+      "Bash(./waterlogger:*)",
+      "Bash(timeout 10 ./waterlogger:*)",
+      "Bash(timeout 5 ./waterlogger:*)"
     ],
     "deny": [],
     "ask": []

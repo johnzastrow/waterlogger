@@ -1,0 +1,433 @@
+{
+  "timestamp": "2025-10-27T07:48:47.052307642-04:00",
+  "source_database": "unknown",
+  "users": [
+    {
+      "id": 1,
+      "created_at": "2025-07-14T11:23:52.937-04:00",
+      "updated_at": "2025-07-15T12:19:59.032-04:00",
+      "created_by": 0,
+      "updated_by": 0,
+      "username": "jcz",
+      "email": "b@here.com"
+    },
+    {
+      "id": 3,
+      "created_at": "2025-07-15T12:31:51.6-04:00",
+      "updated_at": "2025-07-15T12:31:51.6-04:00",
+      "created_by": 0,
+      "updated_by": 0,
+      "username": "bob",
+      "email": "bob@here.com"
+    },
+    {
+      "id": 4,
+      "created_at": "2025-07-15T12:38:05.189-04:00",
+      "updated_at": "2025-07-15T12:38:05.189-04:00",
+      "created_by": 0,
+      "updated_by": 0,
+      "username": "k",
+      "email": "b8@here.com"
+    }
+  ],
+  "user_preferences": [
+    {
+      "id": 1,
+      "created_at": "2025-07-14T11:23:52.96-04:00",
+      "updated_at": "2025-07-14T12:06:28.173-04:00",
+      "created_by": 3,
+      "updated_by": 1,
+      "user_id": 1,
+      "unit_system": "imperial"
+    }
+  ],
+  "pools": [
+    {
+      "id": 1,
+      "created_at": "2025-07-14T13:42:16.026-04:00",
+      "updated_at": "2025-07-14T20:46:44.375-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "name": "Intex 8400 Gal Rectangle",
+      "volume_gallons": 8400,
+      "type": "pool",
+      "system_description": "Above ground"
+    },
+    {
+      "id": 2,
+      "created_at": "2025-07-14T23:04:52.674-04:00",
+      "updated_at": "2025-07-14T23:04:52.674-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "name": "Softub 300",
+      "volume_gallons": 300,
+      "type": "hot_tub",
+      "system_description": "Hotter tub"
+    }
+  ],
+  "kits": [
+    {
+      "id": 2,
+      "created_at": "2025-10-27T07:44:00.406-04:00",
+      "updated_at": "2025-10-27T07:44:00.406-04:00",
+      "created_by": 1,
+      "updated_by": 1,
+      "name": "Taylor K-2006",
+      "description": "Drops DPD",
+      "purchased_date": "2025-06-30T20:00:00-04:00",
+      "replenished_date": "2025-06-02T20:00:00-04:00"
+    },
+    {
+      "id": 3,
+      "created_at": "2025-10-27T07:44:00.406-04:00",
+      "updated_at": "2025-10-27T07:44:00.406-04:00",
+      "created_by": 1,
+      "updated_by": 1,
+      "name": "Taylor K-2010",
+      "description": "Doesn't exist",
+      "purchased_date": "2025-06-30T20:00:00-04:00",
+      "replenished_date": "2025-06-02T20:00:00-04:00"
+    }
+  ],
+  "samples": [
+    {
+      "id": 14,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 1,
+      "sample_datetime": "2025-07-19T03:30:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": "Test sample for measurements fix 8"
+    },
+    {
+      "id": 15,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 1,
+      "sample_datetime": "2025-07-14T15:50:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": "njnj"
+    },
+    {
+      "id": 16,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 1,
+      "sample_datetime": "2025-07-14T16:41:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": ""
+    },
+    {
+      "id": 17,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 1,
+      "sample_datetime": "2025-07-14T18:42:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": "Should be scaling"
+    },
+    {
+      "id": 18,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 1,
+      "sample_datetime": "2025-07-14T15:30:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": "Updated test sample - pH changed"
+    },
+    {
+      "id": 19,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 1,
+      "sample_datetime": "2025-07-14T15:30:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": "Test removing pH to null indices"
+    },
+    {
+      "id": 20,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 1,
+      "sample_datetime": "2025-07-14T17:53:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": ""
+    },
+    {
+      "id": 21,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 2,
+      "sample_datetime": "2025-07-14T19:04:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": "wow!"
+    },
+    {
+      "id": 22,
+      "created_at": "2025-10-27T07:44:00.416-04:00",
+      "updated_at": "2025-10-27T07:44:00.416-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "pool_id": 1,
+      "sample_datetime": "2025-07-15T06:27:00-04:00",
+      "user_id": 1,
+      "kit_id": 2,
+      "notes": "Really low"
+    }
+  ],
+  "measurements": [
+    {
+      "id": 11,
+      "created_at": "2025-10-27T07:44:00.43-04:00",
+      "updated_at": "2025-07-14T22:58:38.655-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 14,
+      "fc": 10,
+      "tc": 9,
+      "ph": 4,
+      "ta": 110,
+      "ch": 180,
+      "cya": 8,
+      "temperature": 78,
+      "salinity": 8
+    },
+    {
+      "id": 12,
+      "created_at": "2025-07-14T19:51:33.414-04:00",
+      "updated_at": "2025-07-14T19:51:33.414-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 15,
+      "fc": 1,
+      "tc": 2,
+      "ph": 7.1,
+      "ta": 100,
+      "ch": 120,
+      "cya": 20,
+      "temperature": 100,
+      "salinity": 80
+    },
+    {
+      "id": 13,
+      "created_at": "2025-07-14T20:42:29.782-04:00",
+      "updated_at": "2025-07-14T20:42:29.782-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 16,
+      "fc": 2,
+      "tc": 4,
+      "ph": 6.9,
+      "ta": 120,
+      "ch": 200,
+      "cya": 20,
+      "temperature": 120,
+      "salinity": 30
+    },
+    {
+      "id": 14,
+      "created_at": "2025-07-14T20:43:44.401-04:00",
+      "updated_at": "2025-07-14T20:43:44.401-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 17,
+      "fc": 2,
+      "tc": 4,
+      "ph": 8,
+      "ta": 300,
+      "ch": 300,
+      "cya": 300,
+      "temperature": 100,
+      "salinity": 20
+    },
+    {
+      "id": 15,
+      "created_at": "2025-07-14T21:45:02.779-04:00",
+      "updated_at": "2025-07-14T21:45:02.81-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 18,
+      "fc": 2,
+      "tc": 2,
+      "ph": 7.8,
+      "ta": 120,
+      "ch": 200,
+      "temperature": 80
+    },
+    {
+      "id": 16,
+      "created_at": "2025-07-14T21:46:33.775-04:00",
+      "updated_at": "2025-07-14T21:46:33.803-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 19,
+      "fc": 2,
+      "tc": 2,
+      "ph": 0,
+      "ta": 120,
+      "ch": 200,
+      "temperature": 80
+    },
+    {
+      "id": 17,
+      "created_at": "2025-07-14T21:54:11.465-04:00",
+      "updated_at": "2025-07-14T21:54:11.465-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 20,
+      "fc": 2,
+      "tc": 10,
+      "ph": 7.6,
+      "ta": 120,
+      "ch": 80,
+      "cya": 20,
+      "temperature": 84,
+      "salinity": 3200
+    },
+    {
+      "id": 18,
+      "created_at": "2025-07-14T23:05:50.597-04:00",
+      "updated_at": "2025-07-14T23:05:50.597-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 21,
+      "fc": 9,
+      "tc": 4,
+      "ph": 9,
+      "ta": 1,
+      "ch": 1,
+      "cya": 1,
+      "temperature": 1000,
+      "salinity": 1
+    },
+    {
+      "id": 19,
+      "created_at": "2025-07-15T10:28:09.353-04:00",
+      "updated_at": "2025-07-15T10:28:09.353-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 22,
+      "fc": 1,
+      "tc": 1,
+      "ph": 1,
+      "ta": 1,
+      "ch": 1,
+      "cya": 1,
+      "temperature": 1,
+      "salinity": 1
+    }
+  ],
+  "indices": [
+    {
+      "id": 2,
+      "created_at": "2025-07-14T19:51:33.431-04:00",
+      "updated_at": "2025-07-14T19:51:33.431-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 15,
+      "lsi": -0.08728041009583709,
+      "rsi": 7.274560820191674,
+      "comment": "Estimated. Calculated with mid-range defaults for the following parameters that were missing: TDS"
+    },
+    {
+      "id": 3,
+      "created_at": "2025-07-14T20:42:29.821-04:00",
+      "updated_at": "2025-07-14T20:42:29.821-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 16,
+      "lsi": 0.1981390892105912,
+      "rsi": 6.503721821578818,
+      "comment": "Estimated. Calculated with mid-range defaults for the following parameters that were missing: TDS"
+    },
+    {
+      "id": 4,
+      "created_at": "2025-07-14T20:43:44.435-04:00",
+      "updated_at": "2025-07-14T20:43:44.435-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 17,
+      "lsi": 1.6877808532958634,
+      "rsi": 4.624438293408273,
+      "comment": "Estimated. Calculated with mid-range defaults for the following parameters that were missing: TDS"
+    },
+    {
+      "id": 5,
+      "created_at": "2025-07-14T21:45:02.878-04:00",
+      "updated_at": "2025-07-14T21:45:02.878-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 18,
+      "lsi": 0.7050176114328375,
+      "rsi": 6.389964777134325,
+      "comment": "Estimated. Calculated with mid-range defaults for the following parameters that were missing: TDS"
+    },
+    {
+      "id": 6,
+      "created_at": "2025-07-14T21:54:11.5-04:00",
+      "updated_at": "2025-07-14T21:54:11.5-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 20,
+      "lsi": 0.15089703420859557,
+      "rsi": 7.2982059315828085,
+      "comment": "Estimated. Calculated with mid-range defaults for the following parameters that were missing: TDS"
+    },
+    {
+      "id": 9,
+      "created_at": "2025-07-14T22:58:38.737-04:00",
+      "updated_at": "2025-07-14T22:58:38.737-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 14,
+      "lsi": -3.2008423930617678,
+      "rsi": 10.401684786123536,
+      "comment": "Estimated. Calculated with mid-range defaults for the following parameters that were missing: TDS"
+    },
+    {
+      "id": 10,
+      "created_at": "2025-07-14T23:05:50.633-04:00",
+      "updated_at": "2025-07-14T23:05:50.633-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 21,
+      "comment": "Estimated. Calculated with mid-range defaults for the following parameters that were missing: TDS"
+    },
+    {
+      "id": 11,
+      "created_at": "2025-07-15T10:28:09.376-04:00",
+      "updated_at": "2025-07-15T10:28:09.376-04:00",
+      "created_by": 3,
+      "updated_by": 3,
+      "sample_id": 22,
+      "lsi": -11.597723873376937,
+      "rsi": 24.195447746753874,
+      "comment": "Estimated. Calculated with mid-range defaults for the following parameters that were missing: TDS"
+    }
+  ],
+  "adjustments": []
+}

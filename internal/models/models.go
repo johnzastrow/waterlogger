@@ -368,3 +368,11 @@ func (m *BaseModel) BeforeUpdate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+// SchemaMigration tracks applied database schema migrations
+type SchemaMigration struct {
+	ID        uint      `gorm:"primarykey" json:"id"`
+	Version   string    `gorm:"uniqueIndex;not null" json:"version"` // e.g., "001", "002"
+	Name      string    `gorm:"not null" json:"name"`                 // e.g., "initial_schema"
+	AppliedAt time.Time `gorm:"not null" json:"applied_at"`
+}

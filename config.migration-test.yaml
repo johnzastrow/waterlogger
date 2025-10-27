@@ -1,0 +1,29 @@
+server:
+    port: 2342
+    host: localhost
+
+database:
+    type: sqlite  # Source database for migration
+    sqlite:
+        path: waterlogger.db
+    mariadb:
+        host: 192.168.1.234
+        port: 3306
+        username: jcz
+        password: yub.miha
+        database: test_water
+
+app:
+    name: Waterlogger
+    version: 1.3.0
+    secret_key: test-migration-secret-key
+
+logging:
+    level: debug  # Use debug for migration testing
+    format: console
+    output: both
+    file_path: logs/migration-test.log
+    max_size: 100
+    max_backups: 3
+    max_age: 28
+    compress: true
