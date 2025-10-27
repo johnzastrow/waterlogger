@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,6 +16,7 @@ import (
 	"waterlogger/internal/config"
 	"waterlogger/internal/database"
 	"waterlogger/internal/handlers"
+	"waterlogger/internal/logging"
 	"waterlogger/internal/middleware"
 	"waterlogger/internal/models"
 )
@@ -49,7 +49,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Println("Waterlogger v1.0.0")
+		fmt.Println("Waterlogger v1.3.0")
 		os.Exit(0)
 	}
 
@@ -69,7 +69,7 @@ func main() {
 		fmt.Println("  -import string           Import database data from backup file")
 		fmt.Println("  -reset-password string   Reset password for specified username")
 		fmt.Println()
-		fmt.Println("For more information, visit: https://github.com/your-org/waterlogger")
+		fmt.Println("For more information, visit: https://github.com/johnzastrow/waterlogger")
 		os.Exit(0)
 	}
 
@@ -78,91 +78,123 @@ func main() {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Config file doesn't exist, create default
-			log.Printf("Config file not found: %v", err)
-			log.Println("Creating default configuration...")
+			fmt.Printf("Config file not found: %v\n", err)
+			fmt.Println("Creating default configuration...")
 			cfg = config.Default()
 			if err := cfg.Save(configPath); err != nil {
-				log.Fatalf("Failed to save default config: %v", err)
+				fmt.Printf("Failed to save default config: %v\n", err)
+				os.Exit(1)
 			}
 		} else {
 			// Config file exists but has errors, don't overwrite
-			log.Fatalf("Failed to load config: %v", err)
+			fmt.Printf("Failed to load config: %v\n", err)
+			os.Exit(1)
 		}
 	}
+
+	// Initialize logging
+	logConfig := &logging.Config{
+		Level:      cfg.Logging.Level,
+		Format:     cfg.Logging.Format,
+		Output:     cfg.Logging.Output,
+		FilePath:   cfg.Logging.FilePath,
+		MaxSize:    cfg.Logging.MaxSize,
+		MaxBackups: cfg.Logging.MaxBackups,
+		MaxAge:     cfg.Logging.MaxAge,
+		Compress:   cfg.Logging.Compress,
+	}
+	if err := logging.Initialize(logConfig); err != nil {
+		fmt.Printf("Failed to initialize logging: %v\n", err)
+		os.Exit(1)
+	}
+
+	logging.Info().Msg("Waterlogger starting...")
+	logging.Info().Str("version", "1.3.0").Str("build_time", BuildTime).Str("build_date", BuildDate).Msg("Build information")
 
 	// Initialize database
 	db, err := database.NewDB(cfg)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		logging.Fatal().Err(err).Msg("Failed to initialize database")
 	}
 	defer db.Close()
 	
 	// Handle migration commands
 	if migrateToMariaDB {
-		log.Println("Starting migration from SQLite to MariaDB...")
+		logging.Info().Msg("Starting migration from SQLite to MariaDB")
 		if err := database.MigrateSQLiteToMariaDB(cfg); err != nil {
-			log.Fatalf("Migration failed: %v", err)
+			logging.Fatal().Err(err).Msg("Migration failed")
 		}
-		log.Println("Migration completed successfully!")
+		logging.Info().Msg("Migration completed successfully")
 		os.Exit(0)
 	}
-	
+
 	if migrateToSQLite {
-		log.Println("Starting migration from MariaDB to SQLite...")
+		logging.Info().Msg("Starting migration from MariaDB to SQLite")
 		if err := database.MigrateMariaDBToSQLite(cfg); err != nil {
-			log.Fatalf("Migration failed: %v", err)
+			logging.Fatal().Err(err).Msg("Migration failed")
 		}
-		log.Println("Migration completed successfully!")
+		logging.Info().Msg("Migration completed successfully")
 		os.Exit(0)
 	}
-	
+
 	if exportData != "" {
-		log.Printf("Exporting database data to %s...", exportData)
+		logging.Info().Str("file", exportData).Msg("Exporting database data")
 		if err := database.ExportData(db.DB, exportData, cfg.Database.Type); err != nil {
-			log.Fatalf("Export failed: %v", err)
+			logging.Fatal().Err(err).Str("file", exportData).Msg("Export failed")
 		}
-		log.Println("Export completed successfully!")
+		logging.Info().Str("file", exportData).Msg("Export completed successfully")
 		os.Exit(0)
 	}
-	
+
 	if importData != "" {
-		log.Printf("Importing database data from %s...", importData)
+		logging.Info().Str("file", importData).Msg("Importing database data")
 		if err := database.ImportData(db.DB, importData); err != nil {
-			log.Fatalf("Import failed: %v", err)
+			logging.Fatal().Err(err).Str("file", importData).Msg("Import failed")
 		}
-		log.Println("Import completed successfully!")
+		logging.Info().Str("file", importData).Msg("Import completed successfully")
 		os.Exit(0)
 	}
-	
+
 	if resetPassword != "" {
-		log.Printf("Resetting password for user: %s", resetPassword)
+		logging.Info().Str("username", resetPassword).Msg("Resetting user password")
 		if err := resetUserPassword(db.DB, resetPassword); err != nil {
-			log.Fatalf("Password reset failed: %v", err)
+			logging.Fatal().Err(err).Str("username", resetPassword).Msg("Password reset failed")
 		}
-		log.Println("Password reset completed successfully!")
+		logging.Info().Str("username", resetPassword).Msg("Password reset completed successfully")
 		os.Exit(0)
 	}
 
 	// Create default admin user if needed
 	if err := db.CreateDefaultAdminUser(); err != nil {
-		log.Printf("Failed to create default admin user: %v", err)
+		logging.Error().Err(err).Msg("Failed to create default admin user")
 	}
 
 	// Initialize Gin router
 	if cfg.App.Name == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	
-	router := gin.Default()
+
+	// Create router without default middleware (we'll add our own logging)
+	router := gin.New()
+
+	// Add recovery middleware
+	router.Use(gin.Recovery())
+
+	// Add our custom logging middleware
+	router.Use(middleware.RequestIDMiddleware())
+	router.Use(middleware.LoggingMiddleware())
+	router.Use(middleware.AuditLoggingMiddleware())
 
 	// Load HTML templates
 	templatesPattern := filepath.Join("web", "templates", "*.html")
 	router.LoadHTMLGlob(templatesPattern)
+	logging.Info().Str("pattern", templatesPattern).Msg("Loaded HTML templates")
 
-	// Add build info to template context
+	// Add build info and version to template context
 	router.Use(func(c *gin.Context) {
 		c.Set("BuildTime", BuildTime)
 		c.Set("BuildDate", BuildDate)
+		c.Set("Version", cfg.App.Version)
 		c.Next()
 	})
 
@@ -182,11 +214,15 @@ func main() {
 
 	// Start server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	log.Printf("Starting Waterlogger server on %s", addr)
-	log.Printf("Open your browser to: http://%s", addr)
-	
+	logging.Info().
+		Str("address", addr).
+		Str("host", cfg.Server.Host).
+		Int("port", cfg.Server.Port).
+		Msg("Starting Waterlogger server")
+	logging.Info().Str("url", fmt.Sprintf("http://%s", addr)).Msg("Open your browser to access Waterlogger")
+
 	if err := router.Run(addr); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logging.Fatal().Err(err).Str("address", addr).Msg("Failed to start server")
 	}
 }
 
@@ -276,11 +312,14 @@ func resetUserPassword(db *gorm.DB, username string) error {
 	var user models.User
 	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
+			logging.Error().Str("username", username).Msg("User not found")
 			return fmt.Errorf("user '%s' not found", username)
 		}
+		logging.Error().Err(err).Str("username", username).Msg("Database error looking up user")
 		return fmt.Errorf("database error: %v", err)
 	}
 
+	logging.Info().Str("username", user.Username).Str("email", user.Email).Msg("Found user for password reset")
 	fmt.Printf("Found user: %s (%s)\n", user.Username, user.Email)
 	
 	var newPassword string

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -15,6 +14,7 @@ import (
 	"waterlogger/internal/adjustments"
 	"waterlogger/internal/chemistry"
 	"waterlogger/internal/config"
+	"waterlogger/internal/logging"
 	"waterlogger/internal/middleware"
 	"waterlogger/internal/models"
 	"waterlogger/internal/volume"
@@ -45,30 +45,35 @@ func (h *Handlers) SetupWizardPage(c *gin.Context) {
 }
 
 func (h *Handlers) SetupWizardAPI(c *gin.Context) {
-	log.Printf("Setup wizard API called from %s", c.ClientIP())
-	
+	logger := logging.WithRequestID(c.GetString("request_id"))
+	logger.Info().Str("ip", c.ClientIP()).Msg("Setup wizard API called")
+
 	var req struct {
 		Username string `json:"username" binding:"required"`
 		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required"`
-		
+
 		DatabaseType string `json:"database_type" binding:"required"`
 		DBHost       string `json:"db_host"`
 		DBPort       int    `json:"db_port"`
 		DBUsername   string `json:"db_username"`
 		DBPassword   string `json:"db_password"`
 		DBName       string `json:"db_name"`
-		
+
 		ServerPort int `json:"server_port"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("Setup wizard JSON bind error: %v", err)
+		logger.Error().Err(err).Msg("Setup wizard JSON bind error")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format", "details": err.Error()})
 		return
 	}
-	
-	log.Printf("Setup wizard request: username=%s, email=%s, db_type=%s", req.Username, req.Email, req.DatabaseType)
+
+	logger.Info().
+		Str("username", req.Username).
+		Str("email", req.Email).
+		Str("db_type", req.DatabaseType).
+		Msg("Setup wizard request received")
 
 	// Validate password
 	if errors := middleware.ValidatePassword(req.Password); len(errors) > 0 {
@@ -91,10 +96,11 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 	}
 
 	if err := h.db.Create(&user).Error; err != nil {
-		log.Printf("Failed to create user: %v", err)
+		logger.Error().Err(err).Str("username", req.Username).Msg("Failed to create user")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user", "details": err.Error()})
 		return
 	}
+	logger.Info().Uint("user_id", user.ID).Str("username", user.Username).Msg("User created successfully")
 
 	// Create user preferences
 	preferences := models.UserPreferences{
@@ -103,7 +109,7 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 	}
 
 	if err := h.db.Create(&preferences).Error; err != nil {
-		log.Printf("Failed to create user preferences: %v", err)
+		logger.Error().Err(err).Uint("user_id", user.ID).Msg("Failed to create user preferences")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user preferences", "details": err.Error()})
 		return
 	}
@@ -137,12 +143,17 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 
 	// Save configuration
 	if err := h.cfg.Save("config.yaml"); err != nil {
-		log.Printf("Failed to save configuration: %v", err)
+		logger.Error().Err(err).Msg("Failed to save configuration")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save configuration", "details": err.Error()})
 		return
 	}
 
-	log.Printf("Setup completed successfully for user: %s", req.Username)
+	logger.Info().Str("username", req.Username).Msg("Setup completed successfully")
+	logging.AuditLog("setup_completed", user.ID, map[string]interface{}{
+		"username": user.Username,
+		"email":    user.Email,
+		"db_type":  req.DatabaseType,
+	})
 	c.JSON(http.StatusOK, gin.H{"message": "Setup completed successfully"})
 }
 
@@ -322,16 +333,20 @@ func (h *Handlers) GetSamples(c *gin.Context) {
 }
 
 func (h *Handlers) CreateSample(c *gin.Context) {
+	logger := logging.WithRequestID(c.GetString("request_id"))
+
 	var sample models.Sample
 	if err := c.ShouldBindJSON(&sample); err != nil {
+		logger.Error().Err(err).Msg("Failed to parse sample JSON")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	fmt.Printf("DEBUG: Parsed sample: %+v\n", sample)
-	if sample.Measurements != nil {
-		fmt.Printf("DEBUG: Sample measurements: %+v\n", sample.Measurements)
-	}
+	logger.Debug().
+		Uint("pool_id", sample.PoolID).
+		Uint("kit_id", sample.KitID).
+		Bool("has_measurements", sample.Measurements != nil).
+		Msg("Parsed sample data")
 
 	// Set user ID if not provided
 	if sample.UserID == 0 {
@@ -340,9 +355,11 @@ func (h *Handlers) CreateSample(c *gin.Context) {
 
 	// Create sample in database - GORM will automatically create associated measurements
 	if err := h.db.Create(&sample).Error; err != nil {
+		logger.Error().Err(err).Uint("pool_id", sample.PoolID).Msg("Failed to create sample")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sample"})
 		return
 	}
+	logger.Info().Uint("sample_id", sample.ID).Uint("pool_id", sample.PoolID).Msg("Sample created successfully")
 
 	// Calculate water chemistry indices if we have measurements with the minimum required data
 	if sample.Measurements != nil && sample.Measurements.PH != 0 {
@@ -350,9 +367,10 @@ func (h *Handlers) CreateSample(c *gin.Context) {
 			indices.SampleID = sample.ID
 			if err := h.db.Create(indices).Error; err != nil {
 				// Log error but don't fail the request
-				fmt.Printf("Warning: Failed to create indices: %v\n", err)
+				logger.Warn().Err(err).Uint("sample_id", sample.ID).Msg("Failed to create water chemistry indices")
 			} else {
 				sample.Indices = indices
+				logger.Debug().Uint("sample_id", sample.ID).Msg("Water chemistry indices calculated")
 			}
 		}
 	}
@@ -431,14 +449,14 @@ func (h *Handlers) UpdateSample(c *gin.Context) {
 		if sample.Measurements.PH != 0 {
 			if indices, err := chemistry.CalculateIndices(sample.Measurements); err == nil {
 				indices.SampleID = sample.ID
-				
+
 				if err := h.db.Create(indices).Error; err != nil {
-					fmt.Printf("Warning: Failed to update indices: %v\n", err)
+					logging.Warn().Err(err).Uint("sample_id", sample.ID).Msg("Failed to update water chemistry indices")
 				} else {
 					sample.Indices = indices
 				}
 			} else {
-				fmt.Printf("Warning: Failed to calculate indices: %v\n", err)
+				logging.Warn().Err(err).Uint("sample_id", sample.ID).Msg("Failed to calculate water chemistry indices")
 			}
 		} else {
 			// No pH data - indices were already deleted, so indices will be null
@@ -1173,12 +1191,12 @@ func (h *Handlers) ExportMarkdown(c *gin.Context) {
 				if content, err := ioutil.ReadFile(filePath); err == nil {
 					mdContent += string(content) + "\n\n"
 				} else {
-					log.Printf("Warning: Failed to read appendix file %s: %v", filePath, err)
+					logging.Warn().Err(err).Str("file", filePath).Msg("Failed to read appendix file")
 				}
 			}
 		}
 	} else {
-		log.Printf("Warning: Failed to read appendices directory: %v", err)
+		logging.Warn().Err(err).Str("dir", appendicesDir).Msg("Failed to read appendices directory")
 	}
 	
 	// Set headers for file download

@@ -1,5 +1,5 @@
 server:
-  port: 2341
+  port: 2342
   host: "localhost"
 
 database:
@@ -15,5 +15,15 @@ database:
 
 app:
   name: "Waterlogger"
-  version: "1.0.0"
+  version: "1.3.0"
   secret_key: "change-this-to-a-secure-random-string"
+
+logging:
+  level: "info"           # debug, info, warn, error, fatal
+  format: "console"       # json, console
+  output: "both"          # stdout, file, both
+  file_path: "logs/waterlogger.log"
+  max_size: 100           # MB
+  max_backups: 3          # number of old log files to keep
+  max_age: 28             # days
+  compress: true          # compress old log files

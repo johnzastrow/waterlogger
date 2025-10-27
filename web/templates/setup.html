@@ -163,7 +163,11 @@
     </script>
 
     <footer class="build-info">
-        <small>Built on {{.BuildDate}} at {{.BuildTime}}</small>
+        <small>
+            <a href="https://github.com/johnzastrow/waterlogger/blob/main/CHANGELOG.md#130---2025-10-26" target="_blank" title="View changelog">v{{.Version}}</a>
+            <span class="separator">|</span>
+            Built on {{.BuildDate}} at {{.BuildTime}}
+        </small>
     </footer>
 </body>
 </html>

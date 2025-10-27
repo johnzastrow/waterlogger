@@ -3,13 +3,13 @@ package database
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
 	"gorm.io/gorm"
 	"waterlogger/internal/config"
+	"waterlogger/internal/logging"
 	"waterlogger/internal/models"
 )
 
@@ -43,7 +43,7 @@ func NewDatabaseMigrator(sourceDB, targetDB *gorm.DB) *DatabaseMigrator {
 
 // CreateBackup creates a complete backup of the database
 func (dm *DatabaseMigrator) CreateBackup(backupPath string) error {
-	log.Printf("Creating backup at %s", backupPath)
+	logging.Info().Str("path", backupPath).Msg("Creating database backup")
 	
 	backup := BackupData{
 		Timestamp:      time.Now(),
@@ -108,15 +108,19 @@ func (dm *DatabaseMigrator) CreateBackup(backupPath string) error {
 		return fmt.Errorf("failed to write backup data: %v", err)
 	}
 	
-	log.Printf("Backup created successfully with %d users, %d pools, %d samples, %d adjustments", 
-		len(backup.Users), len(backup.Pools), len(backup.Samples), len(backup.Adjustments))
+	logging.Info().
+		Int("users", len(backup.Users)).
+		Int("pools", len(backup.Pools)).
+		Int("samples", len(backup.Samples)).
+		Int("adjustments", len(backup.Adjustments)).
+		Msg("Backup created successfully")
 	
 	return nil
 }
 
 // RestoreFromBackup restores data from a backup file
 func (dm *DatabaseMigrator) RestoreFromBackup(backupPath string) error {
-	log.Printf("Restoring from backup at %s", backupPath)
+	logging.Info().Str("path", backupPath).Msg("Restoring from backup")
 	
 	// Read backup file
 	file, err := os.Open(backupPath)
@@ -202,36 +206,38 @@ func (dm *DatabaseMigrator) RestoreFromBackup(backupPath string) error {
 		}
 	}
 	
-	log.Printf("Restore completed successfully")
+	logging.Info().Msg("Restore completed successfully")
 	return nil
 }
 
 // MigrateDatabase migrates data from SQLite to MariaDB or vice versa
 func (dm *DatabaseMigrator) MigrateDatabase(tempBackupPath string) error {
-	log.Printf("Starting database migration")
-	
+	logging.Info().Msg("Starting database migration")
+
 	// Step 1: Create backup of source database
 	if err := dm.CreateBackup(tempBackupPath); err != nil {
+		logging.Error().Err(err).Msg("Failed to create backup")
 		return fmt.Errorf("failed to create backup: %v", err)
 	}
-	
+
 	// Step 2: Restore to target database
 	if err := dm.RestoreFromBackup(tempBackupPath); err != nil {
+		logging.Error().Err(err).Msg("Failed to restore to target database")
 		return fmt.Errorf("failed to restore to target database: %v", err)
 	}
-	
+
 	// Step 3: Clean up temporary backup file
 	if err := os.Remove(tempBackupPath); err != nil {
-		log.Printf("Warning: failed to remove temporary backup file: %v", err)
+		logging.Warn().Err(err).Str("path", tempBackupPath).Msg("Failed to remove temporary backup file")
 	}
-	
-	log.Printf("Database migration completed successfully")
+
+	logging.Info().Msg("Database migration completed successfully")
 	return nil
 }
 
 // MigrateSQLiteToMariaDB migrates data from SQLite to MariaDB
 func MigrateSQLiteToMariaDB(cfg *config.Config) error {
-	log.Printf("Migrating from SQLite to MariaDB")
+	logging.Info().Msg("Migrating from SQLite to MariaDB")
 	
 	// Create SQLite connection
 	sqliteConfig := &config.Config{
@@ -270,7 +276,7 @@ func MigrateSQLiteToMariaDB(cfg *config.Config) error {
 
 // MigrateMariaDBToSQLite migrates data from MariaDB to SQLite
 func MigrateMariaDBToSQLite(cfg *config.Config) error {
-	log.Printf("Migrating from MariaDB to SQLite")
+	logging.Info().Msg("Migrating from MariaDB to SQLite")
 	
 	// Create MariaDB connection
 	mariadbConfig := &config.Config{

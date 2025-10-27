@@ -1,5 +1,19 @@
 # App Development Discussion Notes
 
+---
+
+## ⚠️ IMPORTANT: VERSION MANAGEMENT
+
+**Before making ANY code changes, read:** [`VERSION_MANAGEMENT.md`](VERSION_MANAGEMENT.md)
+
+**Current Version:** 1.3.0
+
+**Repository:** https://github.com/johnzastrow/waterlogger
+
+**Key Rule:** ALWAYS increment version when making code changes. See VERSION_MANAGEMENT.md for complete instructions.
+
+---
+
 ## Initial Discussion
 
 Based on requirements.md analysis - building a web application called "Waterlogger" for tracking pool and hot tub water parameters with calculations, charting, and export capabilities.

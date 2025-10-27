@@ -8,18 +8,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Sample management interface with measurement input forms
-- Chart.js integration for data visualization
-- Excel and Markdown export functionality
-- Database migration utility for switching between SQLite and MariaDB
-- Unit conversion system with dual-unit display
-- Enhanced mobile responsiveness
+- TBD
 
 ### Changed
 - TBD
 
 ### Fixed
 - TBD
+
+## [1.3.0] - 2025-10-26
+
+### Added - Comprehensive Logging System
+- **Structured logging** with zerolog for high-performance JSON and console output
+- **Log rotation** with lumberjack (configurable max size, backups, age, compression)
+- **Multiple log levels**: debug, info, warn, error, fatal
+- **Multiple output destinations**: stdout, file, or both simultaneously
+- **Request ID middleware** for complete request tracing across all operations
+- **Security audit logging** for sensitive operations (login, user management, data exports, etc.)
+- **Custom GORM logger** with comprehensive database error tracking:
+  - Duplicate key errors detection
+  - Foreign key constraint violations
+  - NOT NULL, UNIQUE, and CHECK constraint violations
+  - Record not found errors
+  - Slow query detection (threshold: 200ms)
+  - Query execution time tracking
+  - SQL query logging with sensitive data sanitization
+- **HTTP request logging** with method, path, status, latency, user agent, and client IP
+- **Configuration section** in config.yaml for logging settings
+- **Logging documentation** (LOGGING.md) with usage examples and best practices
+
+### Changed
+- Replaced standard library `log` package with structured zerolog
+- Updated all log statements throughout codebase to use new structured logger
+- Changed Gin middleware to custom logging middleware for better control
+- Database initialization now uses custom GORM logger for detailed error tracking
+
+### Removed
+- Debug `fmt.Printf` statements from handlers (replaced with proper debug logging)
+- Standard library log imports (replaced with zerolog)
+
+### Technical Details
+- Zero-allocation logging for high performance
+- Automatic log file compression for rotated logs
+- Request tracing with unique request IDs
+- Component-based logging for better organization
+- Error categorization for database operations
+- Audit trail for compliance and security monitoring
 
 ## [1.0.0] - 2024-07-14
 

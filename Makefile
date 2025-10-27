@@ -2,7 +2,7 @@
 
 # Variables
 APP_NAME := waterlogger
-VERSION := 1.0.0
+VERSION := 1.3.0
 BUILD_DIR := build
 DIST_DIR := dist
 MAIN_FILE := cmd/waterlogger/main.go
@@ -18,7 +18,7 @@ all: build
 # Build for current platform
 .PHONY: build
 build:
-	go build $(BUILD_FLAGS) $(LDFLAGS) -o $(APP_NAME) $(MAIN_FILE)
+	CGO_ENABLED=1 go build $(BUILD_FLAGS) $(LDFLAGS) -o $(APP_NAME) $(MAIN_FILE)
 
 # Clean build artifacts
 .PHONY: clean
