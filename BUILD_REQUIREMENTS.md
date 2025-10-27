@@ -19,66 +19,67 @@ Follow the instructions below for your platform.
 - Download from: https://go.dev/dl/
 - Version required: Go 1.21 or higher
 
-### 2. Install a C Compiler (Required for SQLite)
+### 2. Install MSYS2 with MinGW-w64 GCC (Required for SQLite)
 
 **⚠️ IMPORTANT: DO NOT USE CYGWIN**
-Cygwin's GCC cannot build native Windows Go programs with CGO. You will get errors like:
+Cygwin's GCC cannot build native Windows Go programs with CGO. Use MSYS2 instead.
+
+**Step 1: Download and Install MSYS2**
+1. Download from: **https://www.msys2.org/**
+2. Run the installer (e.g., `msys2-x86_64-latest.exe`)
+3. Follow the installation wizard (default: `C:\msys64`)
+4. When finished, it will open an MSYS2 terminal
+
+**Step 2: Update MSYS2**
+In the MSYS2 terminal:
+```bash
+pacman -Syu
 ```
-error: #error "don't use the cygwin compiler to build native Windows programs; use MinGW instead"
+If prompted to close the terminal, close it and reopen "MSYS2 MSYS" from Start Menu, then:
+```bash
+pacman -Su
 ```
 
-**Option A: WinLibs MinGW-w64 Standalone (RECOMMENDED)**
-1. Download from: **https://winlibs.com/**
-2. Choose the **UCRT runtime** version (e.g., "GCC 14.2.0 + MinGW-w64 12.0.0")
-3. Download the **Win64** version (without LLVM for smaller size)
-4. Extract the zip to `C:\mingw64`
-5. Add `C:\mingw64\bin` to your PATH:
-   ```cmd
-   setx PATH "%PATH%;C:\mingw64\bin"
-   ```
-6. **Restart your terminal/command prompt** (required for PATH changes)
+**Step 3: Install MinGW-w64 GCC**
+```bash
+pacman -S mingw-w64-x86_64-gcc
+```
 
-**Option B: TDM-GCC**
-1. Download from: https://jmeubank.github.io/tdm-gcc/
-2. Run installer
-3. It will automatically add to PATH
+**Step 4: Add to Windows PATH**
+1. Press `Win + X` → "System"
+2. Click "Advanced system settings"
+3. Click "Environment Variables"
+4. Under "System variables", select "Path" → "Edit"
+5. Click "New" → Add: `C:\msys64\mingw64\bin`
+6. Click "OK" on all dialogs
+7. **Restart your terminal/command prompt**
 
-**Option C: MSYS2 (Advanced Users)**
-1. Download from: https://www.msys2.org/
-2. Install MSYS2
-3. In MSYS2 terminal:
-   ```bash
-   pacman -S mingw-w64-x86_64-gcc
-   ```
-4. Add `C:\msys64\mingw64\bin` to your PATH
-
-**Verify Installation:**
+**Step 5: Verify Installation**
+Open a **new Windows Command Prompt** (NOT MSYS2 terminal):
 ```cmd
 gcc --version
 ```
 
 Should output something like:
 ```
-gcc (MinGW-W64 x86_64-posix-seh) 11.2.0
+gcc.exe (Rev10, Built by MSYS2 project) 13.2.0
 ```
 
 ### 3. Build Waterlogger
 
-**Using build script:**
+**IMPORTANT: Build from Windows Command Prompt, NOT MSYS2 terminal**
+
+Open Windows Command Prompt or PowerShell:
 ```cmd
+cd C:\Users\YourUsername\path\to\waterlogger
 build.bat
 ```
 
-**Using make (if you have it):**
-```cmd
-make build
-```
-
-**Manual build:**
-```cmd
-set CGO_ENABLED=1
-go build -o waterlogger.exe ./cmd/waterlogger
-```
+The build script automatically:
+- Enables CGO (required for SQLite)
+- Checks for GCC availability
+- Sets build timestamp
+- Creates `waterlogger.exe`
 
 ---
 
@@ -226,10 +227,15 @@ gcc: executable file not found in %PATH%
 ```
 
 **Solution:**
-1. Install MinGW-w64 or TDM-GCC (see Windows section above)
-2. Add to PATH
-3. Restart terminal/command prompt
-4. Verify: `gcc --version`
+1. Make sure MSYS2 is installed (see Windows section above)
+2. Verify GCC is installed in MSYS2:
+   ```bash
+   # In MSYS2 terminal:
+   pacman -S mingw-w64-x86_64-gcc
+   ```
+3. Add `C:\msys64\mingw64\bin` to Windows PATH
+4. **Restart your terminal/command prompt**
+5. Verify: `gcc --version` in Windows Command Prompt
 
 ---
 
@@ -241,10 +247,14 @@ cannot find -lgcc_s
 ```
 
 **Solution:**
-This means your MinGW installation is incomplete or not in PATH.
-1. Reinstall MinGW-w64 using WinLibs standalone package
-2. Ensure `bin` directory is in PATH
-3. Restart terminal
+This means your MSYS2 MinGW-w64 installation is incomplete or not in PATH.
+1. Verify GCC is fully installed:
+   ```bash
+   # In MSYS2 terminal:
+   pacman -S mingw-w64-x86_64-gcc
+   ```
+2. Ensure `C:\msys64\mingw64\bin` is in your Windows PATH
+3. Restart terminal/command prompt
 
 ---
 
@@ -260,27 +270,18 @@ gcc_libinit_windows.c:6:2: error: #error "don't use the cygwin compiler to build
 Cygwin's GCC creates POSIX-emulated binaries, not native Windows executables. Go's CGO runtime explicitly blocks Cygwin for Windows builds.
 
 **Solution:**
-You **must** use MinGW-w64 instead of Cygwin. Choose one of these options:
+You **must** use MSYS2 with MinGW-w64 instead of Cygwin:
 
-1. **WinLibs MinGW-w64** (Recommended):
-   - Download from https://winlibs.com/
-   - Extract to `C:\mingw64`
-   - Add to PATH and restart terminal
-
-2. **TDM-GCC**:
-   - Download from https://jmeubank.github.io/tdm-gcc/
-   - Run installer
-
-3. **Use WSL2 Instead**:
-   - Build the Linux version in WSL2 (see WSL2 section above)
-   - Run the Linux binary in WSL2 environment
-
-**To remove Cygwin from PATH:**
-```cmd
-# Edit your system PATH environment variable
-# Remove any paths containing "cygwin"
-# Restart terminal after removing
-```
+1. **Install MSYS2** (see Windows section above)
+2. Install GCC in MSYS2:
+   ```bash
+   pacman -S mingw-w64-x86_64-gcc
+   ```
+3. Add `C:\msys64\mingw64\bin` to Windows PATH
+4. **Remove Cygwin from PATH**:
+   - Edit your system PATH environment variable
+   - Remove any paths containing "cygwin"
+   - Restart terminal after removing
 
 ---
 

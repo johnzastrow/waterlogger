@@ -47,7 +47,7 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 
 #### Option 1: Download Pre-built Binary
 
-1. Download the latest release for your platform from [Releases](https://github.com/your-org/waterlogger/releases)
+1. Download the latest release for your platform from [Releases](https://github.com/johnzastrow/waterlogger/releases)
 2. Extract the binary to your desired location
 3. Run the application
 
@@ -55,7 +55,7 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/waterlogger.git
+git clone https://github.com/johnzastrow/waterlogger.git
 cd waterlogger
 
 # Build with build timestamps (recommended)
@@ -83,24 +83,34 @@ go build -o waterlogger cmd/waterlogger/main.go
 
 #### Prerequisites
 - Go 1.21 or later
+- **MSYS2 with MinGW-w64 GCC** (required for SQLite/CGO)
 - Git (optional, for cloning)
+
+**⚠️ Important:** Waterlogger uses SQLite which requires CGO (C bindings). You must install MSYS2 with MinGW-w64 GCC.
+
+See [BUILD_REQUIREMENTS.md](BUILD_REQUIREMENTS.md) for detailed MSYS2 setup instructions.
+
+#### Quick Setup
+```cmd
+# 1. Install MSYS2 from https://www.msys2.org/
+# 2. In MSYS2 terminal, install GCC:
+pacman -S mingw-w64-x86_64-gcc
+
+# 3. Add C:\msys64\mingw64\bin to Windows PATH
+# 4. Restart terminal
+```
 
 #### Build Steps
 ```cmd
 # Clone the repository (if not already done)
-git clone https://github.com/your-org/waterlogger.git
+git clone https://github.com/johnzastrow/waterlogger.git
 cd waterlogger
 
 # Download dependencies
-go mod tidy
+go mod download
 
-# Build with timestamps (Windows PowerShell)
-$BUILD_TIME = Get-Date -Format "HH:mm:ss"
-$BUILD_DATE = Get-Date -Format "yyyy-MM-dd"
-go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
-
-# Or build manually (without timestamps)
-go build -o waterlogger.exe cmd/waterlogger/main.go
+# Build using the provided script (recommended)
+build.bat
 
 # Run the application
 waterlogger.exe
@@ -127,7 +137,7 @@ sc start Waterlogger
 #### Build Steps
 ```bash
 # Clone the repository (if not already done)
-git clone https://github.com/your-org/waterlogger.git
+git clone https://github.com/johnzastrow/waterlogger.git
 cd waterlogger
 
 # Download dependencies
@@ -662,9 +672,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Issues**: Report bugs and feature requests on [GitHub Issues](https://github.com/your-org/waterlogger/issues)
-- **Discussions**: Join the community on [GitHub Discussions](https://github.com/your-org/waterlogger/discussions)
-- **Documentation**: Visit the [Wiki](https://github.com/your-org/waterlogger/wiki) for detailed guides
+- **Issues**: Report bugs and feature requests on [GitHub Issues](https://github.com/johnzastrow/waterlogger/issues)
+- **Discussions**: Join the community on [GitHub Discussions](https://github.com/johnzastrow/waterlogger/discussions)
+- **Documentation**: Visit the [Wiki](https://github.com/johnzastrow/waterlogger/wiki) for detailed guides
 
 ## Acknowledgments
 

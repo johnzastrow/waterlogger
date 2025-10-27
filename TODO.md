@@ -52,6 +52,7 @@
 
 ## 🔴 HIGH PRIORITY - Critical Gaps
 
+October 26, 2025 Testing: The version tag that appears in the bottom-right corner of the UI should be updated to  the current version shown in the CHANGELOG.md (1.3.0). However, right now it shows "v | Built on 2025-10-26 at 22:02:00" and it should show "v1.3.0 | Built on 2025-10-26 at 22:02:00".
 
 
 ### 1. Excel Export is Broken

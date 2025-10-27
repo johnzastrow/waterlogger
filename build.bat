@@ -20,11 +20,14 @@ if %ERRORLEVEL% NEQ 0 (
     echo WARNING: GCC not found!
     echo SQLite requires CGO which needs a C compiler.
     echo.
-    echo Please install MinGW-w64 or TDM-GCC:
-    echo   - MinGW-w64: https://www.mingw-w64.org/downloads/
-    echo   - TDM-GCC: https://jmeubank.github.io/tdm-gcc/
+    echo Please install MSYS2 with MinGW-w64:
+    echo   1. Download from: https://www.msys2.org/
+    echo   2. Run the installer
+    echo   3. In MSYS2 terminal: pacman -S mingw-w64-x86_64-gcc
+    echo   4. Add C:\msys64\mingw64\bin to your Windows PATH
+    echo   5. Restart this terminal
     echo.
-    echo After installation, add to PATH and restart terminal.
+    echo See BUILD_REQUIREMENTS.md for detailed instructions.
     echo.
     pause
     exit /b 1
