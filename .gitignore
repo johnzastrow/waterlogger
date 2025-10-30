@@ -45,6 +45,7 @@ waterlogger
 config.yaml
 logs/
 *.log
+old.config.yaml
 
 # Temporary files
 tmp/

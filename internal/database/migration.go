@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"waterlogger/internal/config"
 	"waterlogger/internal/logging"
 	"waterlogger/internal/models"
@@ -448,61 +449,70 @@ func (dm *DatabaseMigrator) RestoreFromBackup(backupPath string) error {
 	}
 	
 	// Restore data in the correct order (respecting foreign key constraints)
-	
+	// Use ON CONFLICT DO NOTHING to skip existing records and only insert new ones
+
 	// 1. Users (no dependencies)
 	if len(backup.Users) > 0 {
-		if err := dm.targetDB.Create(&backup.Users).Error; err != nil {
+		if err := dm.targetDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&backup.Users).Error; err != nil {
 			return fmt.Errorf("failed to restore users: %v", err)
 		}
+		logging.Info().Int("count", len(backup.Users)).Msg("Processed users (existing records skipped)")
 	}
-	
+
 	// 2. UserPreferences (depends on Users)
 	if len(backup.UserPreferences) > 0 {
-		if err := dm.targetDB.Create(&backup.UserPreferences).Error; err != nil {
+		if err := dm.targetDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&backup.UserPreferences).Error; err != nil {
 			return fmt.Errorf("failed to restore user preferences: %v", err)
 		}
+		logging.Info().Int("count", len(backup.UserPreferences)).Msg("Processed user preferences (existing records skipped)")
 	}
-	
+
 	// 3. Pools (depends on Users)
 	if len(backup.Pools) > 0 {
-		if err := dm.targetDB.Create(&backup.Pools).Error; err != nil {
+		if err := dm.targetDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&backup.Pools).Error; err != nil {
 			return fmt.Errorf("failed to restore pools: %v", err)
 		}
+		logging.Info().Int("count", len(backup.Pools)).Msg("Processed pools (existing records skipped)")
 	}
-	
+
 	// 4. Kits (no dependencies)
 	if len(backup.Kits) > 0 {
-		if err := dm.targetDB.Create(&backup.Kits).Error; err != nil {
+		if err := dm.targetDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&backup.Kits).Error; err != nil {
 			return fmt.Errorf("failed to restore kits: %v", err)
 		}
+		logging.Info().Int("count", len(backup.Kits)).Msg("Processed kits (existing records skipped)")
 	}
-	
+
 	// 5. Samples (depends on Pools, Users, Kits)
 	if len(backup.Samples) > 0 {
-		if err := dm.targetDB.Create(&backup.Samples).Error; err != nil {
+		if err := dm.targetDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&backup.Samples).Error; err != nil {
 			return fmt.Errorf("failed to restore samples: %v", err)
 		}
+		logging.Info().Int("count", len(backup.Samples)).Msg("Processed samples (existing records skipped)")
 	}
-	
+
 	// 6. Measurements (depends on Samples)
 	if len(backup.Measurements) > 0 {
-		if err := dm.targetDB.Create(&backup.Measurements).Error; err != nil {
+		if err := dm.targetDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&backup.Measurements).Error; err != nil {
 			return fmt.Errorf("failed to restore measurements: %v", err)
 		}
+		logging.Info().Int("count", len(backup.Measurements)).Msg("Processed measurements (existing records skipped)")
 	}
-	
+
 	// 7. Indices (depends on Samples)
 	if len(backup.Indices) > 0 {
-		if err := dm.targetDB.Create(&backup.Indices).Error; err != nil {
+		if err := dm.targetDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&backup.Indices).Error; err != nil {
 			return fmt.Errorf("failed to restore indices: %v", err)
 		}
+		logging.Info().Int("count", len(backup.Indices)).Msg("Processed indices (existing records skipped)")
 	}
-	
+
 	// 8. Adjustments (depends on Pools, optionally on Samples)
 	if len(backup.Adjustments) > 0 {
-		if err := dm.targetDB.Create(&backup.Adjustments).Error; err != nil {
+		if err := dm.targetDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&backup.Adjustments).Error; err != nil {
 			return fmt.Errorf("failed to restore adjustments: %v", err)
 		}
+		logging.Info().Int("count", len(backup.Adjustments)).Msg("Processed adjustments (existing records skipped)")
 	}
 	
 	logging.Info().Msg("Restore completed successfully")
