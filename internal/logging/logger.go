@@ -55,6 +55,20 @@ func Initialize(cfg *Config) error {
 		cfg = DefaultConfig()
 	}
 
+	// Apply defaults for empty fields
+	if cfg.Level == "" {
+		cfg.Level = "info"
+	}
+	if cfg.Format == "" {
+		cfg.Format = "console"
+	}
+	if cfg.Output == "" {
+		cfg.Output = "stdout"
+	}
+	if cfg.FilePath == "" {
+		cfg.FilePath = "logs/waterlogger.log"
+	}
+
 	// Parse log level
 	level, err := zerolog.ParseLevel(cfg.Level)
 	if err != nil {
