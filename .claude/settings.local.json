@@ -14,7 +14,9 @@
       "Bash(do sed -i 's|#130---2025-10-26|#140---2025-10-27|g' \"$file\")",
       "Bash(done)",
       "Bash(chmod:*)",
-      "Bash(do sed -i 's|#140---2025-10-27|#150---2025-10-27|g' \"$file\")"
+      "Bash(do sed -i 's|#140---2025-10-27|#150---2025-10-27|g' \"$file\")",
+      "Bash(timeout 3 ./waterlogger:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
