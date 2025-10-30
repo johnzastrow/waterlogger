@@ -8,18 +8,194 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Sample management interface with measurement input forms
-- Chart.js integration for data visualization
-- Excel and Markdown export functionality
-- Database migration utility for switching between SQLite and MariaDB
-- Unit conversion system with dual-unit display
-- Enhanced mobile responsiveness
+- TBD
 
 ### Changed
 - TBD
 
 ### Fixed
 - TBD
+
+## [1.5.0] - 2025-10-27
+
+### Added - Database Backup Import & Automated Deployment
+
+#### Database Backup Import Feature
+- **Web-based backup import** from Settings page
+  - File upload interface for JSON backup files
+  - Validation of file type (.json only)
+  - Real-time import progress with loading states
+  - Success/error messages with detailed feedback
+  - Automatic refresh of settings and migrations after import
+- **Backwards compatibility handling**
+  - Imports data from older system versions gracefully
+  - Auto-updates database schema if needed
+  - Foreign key validation and automatic fixing
+  - Skips missing or incompatible fields without failing
+  - Handles partial imports when some data is unavailable
+- **User experience enhancements**
+  - Warning about data being added (not replaced)
+  - Clear file selection feedback
+  - Automatic cleanup of uploaded files
+  - 10-second auto-dismiss of success messages
+- **New API endpoint**: `POST /api/settings/import` - Import database from uploaded backup file
+- **CSS styling** for message boxes (success, warning, info)
+
+#### Automated Deployment Scripts
+- **Linux deployment script** (`deploy-linux.sh`) for one-command systemd service installation
+  - Creates installation directory structure (`/opt/waterlogger`, `logs/`, `backups/`)
+  - Creates dedicated `waterlogger` user with proper permissions
+  - Optional production configuration (json logging, file output)
+  - Generates systemd service file with security hardening
+  - Auto-enables service to start on boot
+- **Windows deployment script** (`deploy-windows.bat`) for one-command Windows service installation
+  - Creates installation directory structure (`C:\Program Files\Waterlogger`, `logs/`, `backups/`)
+  - Optional production configuration
+  - Creates Windows service with automatic restart on failure
+  - Includes service management commands
+- **Enhanced systemd service file** with:
+  - Security hardening (NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp)
+  - Proper working directory and read-write paths
+  - Journald integration with SyslogIdentifier
+  - Restart policy with 10-second delay
+  - Documentation link
+- **Comprehensive deployment documentation** in README.md
+  - Quick deployment (automated) and manual deployment options
+  - Production configuration recommendations
+  - Log viewing instructions
+  - Service management commands
+
+### Changed
+- **Settings page** redesigned with "Backup Database" and "Restore from Backup" sections
+- **Database Management section** now includes both backup creation and import capabilities
+- **Deployment process** significantly simplified with automated scripts
+
+### Technical Details
+- Import uses existing `database.ImportData()` function with enhanced error handling
+- Temporary file handling with automatic cleanup
+- File upload via multipart/form-data
+- Frontend uses FormData API for file upload
+- Imports data in correct order respecting foreign key constraints
+
+## [1.4.0] - 2025-10-27
+
+### Added - Database Schema Migration System & Enhanced Settings UI
+
+#### Schema Migration System
+- **Version-tracked schema migrations** for managing database structure changes
+- **SchemaMigration model** to track applied migrations with version, name, and timestamp
+- **Migration interface** with Up() and Down() methods for applying and reverting changes
+- **Automatic migration execution** on application startup
+- **Migration registry** for centralized migration management
+- **Transaction-wrapped migrations** for atomicity (all-or-nothing execution)
+- **Command-line migration tools**:
+  - `-migration-status` - View all applied migrations
+  - `-migration-rollback` - Revert the last migration
+- **Cross-database support** - Works with both SQLite and MariaDB
+- **Migration documentation** (MIGRATIONS.md) with comprehensive examples and best practices
+
+#### Enhanced Settings UI
+- **System Information section** displaying:
+  - Application version
+  - Build date and time
+  - Database type (SQLite/MariaDB)
+  - Current schema version
+  - Total migrations applied
+  - Server host and port
+- **Database Schema Migrations section** with:
+  - Complete migration history table
+  - Refresh capability for latest status
+  - Applied date/time for each migration
+  - Command-line instructions for advanced operations
+- **Database Management section** with:
+  - Current database connection details (sanitized)
+  - One-click database backup creation
+  - Auto-generated timestamped backup files (WL<timestamp>.json)
+  - Database migration instructions (SQLite ↔ MariaDB)
+  - Safety warnings and documentation links
+- **User-friendly interface** with loading states, success messages, and error handling
+
+#### API Endpoints
+- `GET /api/settings/migrations` - Retrieve migration history
+- `POST /api/settings/backup` - Create database backup on demand
+- Enhanced `GET /api/settings` - Returns comprehensive system information
+
+#### Automated Deployment Scripts
+- **Linux deployment script** (`deploy-linux.sh`) for automated systemd service installation
+  - Creates installation directory structure (`/opt/waterlogger`, `logs/`, `backups/`)
+  - Creates dedicated `waterlogger` user with proper permissions
+  - Optional production configuration (json logging, file output)
+  - Generates systemd service file with security hardening
+  - Auto-enables service to start on boot
+- **Windows deployment script** (`deploy-windows.bat`) for automated Windows service installation
+  - Creates installation directory structure (`C:\Program Files\Waterlogger`, `logs/`, `backups/`)
+  - Optional production configuration
+  - Creates Windows service with automatic restart on failure
+  - Includes service management commands
+- **Enhanced systemd service file** with:
+  - Security hardening (NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp)
+  - Proper working directory and read-write paths
+  - Journald integration with SyslogIdentifier
+  - Restart policy with 10-second delay
+  - Documentation link
+- **Comprehensive deployment documentation** in README.md
+  - Quick deployment (automated) and manual deployment options
+  - Production configuration recommendations
+  - Log viewing instructions
+  - Service management commands
+
+### Changed
+- **GetSettings API** now includes schema version, migration count, and database details
+- **Settings page** completely redesigned with organized sections
+- **Database initialization** now uses migration system instead of simple AutoMigrate
+- **Foreign key validation** enhanced in data migration to handle all relationships
+
+### Technical Details
+- Migration system uses GORM for database operations
+- Migrations tracked in `schema_migrations` table
+- Backups stored in dedicated `backups/` directory
+- All migration operations logged with structured logging
+- Migration runner supports pending migration detection
+- Rollback validation prevents reverting other developers' changes
+
+## [1.3.0] - 2025-10-26
+
+### Added - Comprehensive Logging System
+- **Structured logging** with zerolog for high-performance JSON and console output
+- **Log rotation** with lumberjack (configurable max size, backups, age, compression)
+- **Multiple log levels**: debug, info, warn, error, fatal
+- **Multiple output destinations**: stdout, file, or both simultaneously
+- **Request ID middleware** for complete request tracing across all operations
+- **Security audit logging** for sensitive operations (login, user management, data exports, etc.)
+- **Custom GORM logger** with comprehensive database error tracking:
+  - Duplicate key errors detection
+  - Foreign key constraint violations
+  - NOT NULL, UNIQUE, and CHECK constraint violations
+  - Record not found errors
+  - Slow query detection (threshold: 200ms)
+  - Query execution time tracking
+  - SQL query logging with sensitive data sanitization
+- **HTTP request logging** with method, path, status, latency, user agent, and client IP
+- **Configuration section** in config.yaml for logging settings
+- **Logging documentation** (LOGGING.md) with usage examples and best practices
+
+### Changed
+- Replaced standard library `log` package with structured zerolog
+- Updated all log statements throughout codebase to use new structured logger
+- Changed Gin middleware to custom logging middleware for better control
+- Database initialization now uses custom GORM logger for detailed error tracking
+
+### Removed
+- Debug `fmt.Printf` statements from handlers (replaced with proper debug logging)
+- Standard library log imports (replaced with zerolog)
+
+### Technical Details
+- Zero-allocation logging for high performance
+- Automatic log file compression for rotated logs
+- Request tracing with unique request IDs
+- Component-based logging for better organization
+- Error categorization for database operations
+- Audit trail for compliance and security monitoring
 
 ## [1.0.0] - 2024-07-14
 

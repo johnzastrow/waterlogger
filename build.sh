@@ -8,6 +8,9 @@ echo "Building Waterlogger..."
 echo "Build Date: $BUILD_DATE"
 echo "Build Time: $BUILD_TIME"
 
+# Enable CGO (required for SQLite)
+export CGO_ENABLED=1
+
 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger ./cmd/waterlogger
 
 if [ $? -eq 0 ]; then

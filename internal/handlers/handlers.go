@@ -5,16 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"waterlogger/internal/adjustments"
 	"waterlogger/internal/chemistry"
 	"waterlogger/internal/config"
+	"waterlogger/internal/database"
+	"waterlogger/internal/logging"
 	"waterlogger/internal/middleware"
 	"waterlogger/internal/models"
 	"waterlogger/internal/volume"
@@ -39,36 +42,42 @@ func NewHandlers(db *gorm.DB, cfg *config.Config) *Handlers {
 func (h *Handlers) SetupWizardPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "setup.html", gin.H{
 		"title": "Setup Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
 }
 
 func (h *Handlers) SetupWizardAPI(c *gin.Context) {
-	log.Printf("Setup wizard API called from %s", c.ClientIP())
-	
+	logger := logging.WithRequestID(c.GetString("request_id"))
+	logger.Info().Str("ip", c.ClientIP()).Msg("Setup wizard API called")
+
 	var req struct {
 		Username string `json:"username" binding:"required"`
 		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required"`
-		
+
 		DatabaseType string `json:"database_type" binding:"required"`
 		DBHost       string `json:"db_host"`
 		DBPort       int    `json:"db_port"`
 		DBUsername   string `json:"db_username"`
 		DBPassword   string `json:"db_password"`
 		DBName       string `json:"db_name"`
-		
+
 		ServerPort int `json:"server_port"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("Setup wizard JSON bind error: %v", err)
+		logger.Error().Err(err).Msg("Setup wizard JSON bind error")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format", "details": err.Error()})
 		return
 	}
-	
-	log.Printf("Setup wizard request: username=%s, email=%s, db_type=%s", req.Username, req.Email, req.DatabaseType)
+
+	logger.Info().
+		Str("username", req.Username).
+		Str("email", req.Email).
+		Str("db_type", req.DatabaseType).
+		Msg("Setup wizard request received")
 
 	// Validate password
 	if errors := middleware.ValidatePassword(req.Password); len(errors) > 0 {
@@ -91,10 +100,11 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 	}
 
 	if err := h.db.Create(&user).Error; err != nil {
-		log.Printf("Failed to create user: %v", err)
+		logger.Error().Err(err).Str("username", req.Username).Msg("Failed to create user")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user", "details": err.Error()})
 		return
 	}
+	logger.Info().Uint("user_id", user.ID).Str("username", user.Username).Msg("User created successfully")
 
 	// Create user preferences
 	preferences := models.UserPreferences{
@@ -103,7 +113,7 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 	}
 
 	if err := h.db.Create(&preferences).Error; err != nil {
-		log.Printf("Failed to create user preferences: %v", err)
+		logger.Error().Err(err).Uint("user_id", user.ID).Msg("Failed to create user preferences")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user preferences", "details": err.Error()})
 		return
 	}
@@ -137,12 +147,17 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 
 	// Save configuration
 	if err := h.cfg.Save("config.yaml"); err != nil {
-		log.Printf("Failed to save configuration: %v", err)
+		logger.Error().Err(err).Msg("Failed to save configuration")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save configuration", "details": err.Error()})
 		return
 	}
 
-	log.Printf("Setup completed successfully for user: %s", req.Username)
+	logger.Info().Str("username", req.Username).Msg("Setup completed successfully")
+	logging.AuditLog("setup_completed", user.ID, map[string]interface{}{
+		"username": user.Username,
+		"email":    user.Email,
+		"db_type":  req.DatabaseType,
+	})
 	c.JSON(http.StatusOK, gin.H{"message": "Setup completed successfully"})
 }
 
@@ -150,6 +165,7 @@ func (h *Handlers) SetupWizardAPI(c *gin.Context) {
 func (h *Handlers) LoginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", gin.H{
 		"title": "Login - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -193,6 +209,7 @@ func (h *Handlers) LogoutAPI(c *gin.Context) {
 func (h *Handlers) Dashboard(c *gin.Context) {
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"title": "Dashboard - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -202,6 +219,7 @@ func (h *Handlers) Dashboard(c *gin.Context) {
 func (h *Handlers) PoolsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "pools.html", gin.H{
 		"title": "Pools - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -210,6 +228,7 @@ func (h *Handlers) PoolsPage(c *gin.Context) {
 func (h *Handlers) KitsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "kits.html", gin.H{
 		"title": "Test Kits - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -284,6 +303,7 @@ func (h *Handlers) DeletePool(c *gin.Context) {
 func (h *Handlers) SamplesPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "samples.html", gin.H{
 		"title": "Samples - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -322,16 +342,20 @@ func (h *Handlers) GetSamples(c *gin.Context) {
 }
 
 func (h *Handlers) CreateSample(c *gin.Context) {
+	logger := logging.WithRequestID(c.GetString("request_id"))
+
 	var sample models.Sample
 	if err := c.ShouldBindJSON(&sample); err != nil {
+		logger.Error().Err(err).Msg("Failed to parse sample JSON")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	fmt.Printf("DEBUG: Parsed sample: %+v\n", sample)
-	if sample.Measurements != nil {
-		fmt.Printf("DEBUG: Sample measurements: %+v\n", sample.Measurements)
-	}
+	logger.Debug().
+		Uint("pool_id", sample.PoolID).
+		Uint("kit_id", sample.KitID).
+		Bool("has_measurements", sample.Measurements != nil).
+		Msg("Parsed sample data")
 
 	// Set user ID if not provided
 	if sample.UserID == 0 {
@@ -340,9 +364,11 @@ func (h *Handlers) CreateSample(c *gin.Context) {
 
 	// Create sample in database - GORM will automatically create associated measurements
 	if err := h.db.Create(&sample).Error; err != nil {
+		logger.Error().Err(err).Uint("pool_id", sample.PoolID).Msg("Failed to create sample")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sample"})
 		return
 	}
+	logger.Info().Uint("sample_id", sample.ID).Uint("pool_id", sample.PoolID).Msg("Sample created successfully")
 
 	// Calculate water chemistry indices if we have measurements with the minimum required data
 	if sample.Measurements != nil && sample.Measurements.PH != 0 {
@@ -350,9 +376,10 @@ func (h *Handlers) CreateSample(c *gin.Context) {
 			indices.SampleID = sample.ID
 			if err := h.db.Create(indices).Error; err != nil {
 				// Log error but don't fail the request
-				fmt.Printf("Warning: Failed to create indices: %v\n", err)
+				logger.Warn().Err(err).Uint("sample_id", sample.ID).Msg("Failed to create water chemistry indices")
 			} else {
 				sample.Indices = indices
+				logger.Debug().Uint("sample_id", sample.ID).Msg("Water chemistry indices calculated")
 			}
 		}
 	}
@@ -431,14 +458,14 @@ func (h *Handlers) UpdateSample(c *gin.Context) {
 		if sample.Measurements.PH != 0 {
 			if indices, err := chemistry.CalculateIndices(sample.Measurements); err == nil {
 				indices.SampleID = sample.ID
-				
+
 				if err := h.db.Create(indices).Error; err != nil {
-					fmt.Printf("Warning: Failed to update indices: %v\n", err)
+					logging.Warn().Err(err).Uint("sample_id", sample.ID).Msg("Failed to update water chemistry indices")
 				} else {
 					sample.Indices = indices
 				}
 			} else {
-				fmt.Printf("Warning: Failed to calculate indices: %v\n", err)
+				logging.Warn().Err(err).Uint("sample_id", sample.ID).Msg("Failed to calculate water chemistry indices")
 			}
 		} else {
 			// No pH data - indices were already deleted, so indices will be null
@@ -476,6 +503,7 @@ func (h *Handlers) DeleteSample(c *gin.Context) {
 func (h *Handlers) ExportPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "export.html", gin.H{
 		"title": "Export - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -484,6 +512,7 @@ func (h *Handlers) ExportPage(c *gin.Context) {
 func (h *Handlers) SettingsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "settings.html", gin.H{
 		"title": "Settings - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -492,6 +521,7 @@ func (h *Handlers) SettingsPage(c *gin.Context) {
 func (h *Handlers) AdjustmentsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "adjustments.html", gin.H{
 		"title": "Chemical Adjustments - Waterlogger",
+		"Version": c.MustGet("Version"),
 		"BuildTime": c.MustGet("BuildTime"),
 		"BuildDate": c.MustGet("BuildDate"),
 	})
@@ -1173,12 +1203,12 @@ func (h *Handlers) ExportMarkdown(c *gin.Context) {
 				if content, err := ioutil.ReadFile(filePath); err == nil {
 					mdContent += string(content) + "\n\n"
 				} else {
-					log.Printf("Warning: Failed to read appendix file %s: %v", filePath, err)
+					logging.Warn().Err(err).Str("file", filePath).Msg("Failed to read appendix file")
 				}
 			}
 		}
 	} else {
-		log.Printf("Warning: Failed to read appendices directory: %v", err)
+		logging.Warn().Err(err).Str("dir", appendicesDir).Msg("Failed to read appendices directory")
 	}
 	
 	// Set headers for file download
@@ -1205,7 +1235,7 @@ func (h *Handlers) GetSettings(c *gin.Context) {
 			}
 			preferences.CreatedBy = userID.(uint)
 			preferences.UpdatedBy = userID.(uint)
-			
+
 			if err := h.db.Create(&preferences).Error; err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create default preferences"})
 				return
@@ -1216,11 +1246,43 @@ func (h *Handlers) GetSettings(c *gin.Context) {
 		}
 	}
 
+	// Get latest applied migration
+	var latestMigration models.SchemaMigration
+	var schemaVersion string
+	var migrationCount int64
+
+	h.db.Model(&models.SchemaMigration{}).Count(&migrationCount)
+	if err := h.db.Order("applied_at DESC").First(&latestMigration).Error; err == nil {
+		schemaVersion = latestMigration.Version + " - " + latestMigration.Name
+	} else {
+		schemaVersion = "No migrations applied"
+	}
+
+	// Database connection info (sanitized)
+	dbInfo := gin.H{
+		"type": h.cfg.Database.Type,
+	}
+
+	if h.cfg.Database.Type == "sqlite" {
+		dbInfo["path"] = h.cfg.Database.SQLite.Path
+	} else if h.cfg.Database.Type == "mariadb" {
+		dbInfo["host"] = h.cfg.Database.MariaDB.Host
+		dbInfo["port"] = h.cfg.Database.MariaDB.Port
+		dbInfo["database"] = h.cfg.Database.MariaDB.Database
+		dbInfo["username"] = h.cfg.Database.MariaDB.Username
+	}
+
 	// Get system information
 	systemInfo := gin.H{
-		"database_type": h.cfg.Database.Type,
-		"server_port":   h.cfg.Server.Port,
-		"app_version":   h.cfg.App.Version,
+		"app_version":      h.cfg.App.Version,
+		"build_date":       c.MustGet("BuildDate"),
+		"build_time":       c.MustGet("BuildTime"),
+		"database_type":    h.cfg.Database.Type,
+		"database_info":    dbInfo,
+		"schema_version":   schemaVersion,
+		"migrations_count": migrationCount,
+		"server_host":      h.cfg.Server.Host,
+		"server_port":      h.cfg.Server.Port,
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -1285,6 +1347,149 @@ func (h *Handlers) UpdateSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":     "Settings updated successfully",
 		"preferences": preferences,
+	})
+}
+
+// GetMigrationStatus returns detailed migration information
+func (h *Handlers) GetMigrationStatus(c *gin.Context) {
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Get all migrations from schema_migrations table
+	var migrations []models.SchemaMigration
+	if err := h.db.Order("version ASC").Find(&migrations).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load migration history"})
+		return
+	}
+
+	// Format migration data
+	migrationList := make([]gin.H, 0, len(migrations))
+	for _, m := range migrations {
+		migrationList = append(migrationList, gin.H{
+			"version":    m.Version,
+			"name":       m.Name,
+			"applied_at": m.AppliedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	// Get latest migration
+	var latestVersion string
+	if len(migrations) > 0 {
+		latestVersion = migrations[len(migrations)-1].Version
+	} else {
+		latestVersion = "None"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"migrations":      migrationList,
+		"total_count":     len(migrations),
+		"latest_version":  latestVersion,
+		"database_type":   h.cfg.Database.Type,
+	})
+}
+
+// ExportDatabaseBackup triggers a database export
+func (h *Handlers) ExportDatabaseBackup(c *gin.Context) {
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Generate filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	filename := fmt.Sprintf("WL%s.json", timestamp)
+	filepath := filepath.Join("backups", filename)
+
+	// Create backups directory if it doesn't exist
+	if err := os.MkdirAll("backups", 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create backup directory"})
+		return
+	}
+
+	// Export database
+	if err := database.ExportData(h.db, filepath, h.cfg.Database.Type); err != nil {
+		logging.Error().Err(err).Str("file", filepath).Msg("Backup export failed")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to export database backup",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	logging.Info().Str("file", filepath).Msg("Database backup created successfully")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Database backup created successfully",
+		"filename": filename,
+		"path":     filepath,
+	})
+}
+
+// ImportDatabaseBackup restores database from uploaded backup file
+func (h *Handlers) ImportDatabaseBackup(c *gin.Context) {
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Get uploaded file
+	file, err := c.FormFile("backup")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+
+	// Validate file extension
+	if !strings.HasSuffix(strings.ToLower(file.Filename), ".json") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Only .json files are supported"})
+		return
+	}
+
+	// Create temporary directory if it doesn't exist
+	if err := os.MkdirAll("temp", 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temporary directory"})
+		return
+	}
+
+	// Save uploaded file to temporary location
+	timestamp := time.Now().Format("20060102_150405")
+	tempPath := filepath.Join("temp", fmt.Sprintf("import_%s.json", timestamp))
+
+	if err := c.SaveUploadedFile(file, tempPath); err != nil {
+		logging.Error().Err(err).Str("file", tempPath).Msg("Failed to save uploaded file")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
+		return
+	}
+
+	// Ensure cleanup of temporary file
+	defer func() {
+		if err := os.Remove(tempPath); err != nil {
+			logging.Warn().Err(err).Str("path", tempPath).Msg("Failed to remove temporary import file")
+		}
+	}()
+
+	// Import data from backup
+	logging.Info().Str("file", file.Filename).Msg("Starting database import")
+
+	if err := database.ImportData(h.db, tempPath); err != nil {
+		logging.Error().Err(err).Str("file", file.Filename).Msg("Database import failed")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to import database backup",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	logging.Info().Str("file", file.Filename).Msg("Database import completed successfully")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Database backup imported successfully",
+		"filename": file.Filename,
 	})
 }
 

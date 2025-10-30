@@ -1,0 +1,23 @@
+server:
+    port: 2342
+    host: localhost
+
+database:
+    type: sqlite
+    sqlite:
+        path: waterlogger-test.db
+
+app:
+    name: Waterlogger
+    version: 1.3.0
+    secret_key: test-migrations-secret-key
+
+logging:
+    level: debug
+    format: console
+    output: both
+    file_path: logs/migration-test.log
+    max_size: 100
+    max_backups: 3
+    max_age: 28
+    compress: true

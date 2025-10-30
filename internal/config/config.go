@@ -11,6 +11,7 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
 	App      AppConfig      `yaml:"app"`
+	Logging  LoggingConfig  `yaml:"logging"`
 }
 
 type ServerConfig struct {
@@ -40,6 +41,17 @@ type AppConfig struct {
 	Name      string `yaml:"name"`
 	Version   string `yaml:"version"`
 	SecretKey string `yaml:"secret_key"`
+}
+
+type LoggingConfig struct {
+	Level      string `yaml:"level"`       // debug, info, warn, error, fatal
+	Format     string `yaml:"format"`      // json, console
+	Output     string `yaml:"output"`      // stdout, file, both
+	FilePath   string `yaml:"file_path"`   // path to log file
+	MaxSize    int    `yaml:"max_size"`    // max size in MB before rotation
+	MaxBackups int    `yaml:"max_backups"` // max number of old log files
+	MaxAge     int    `yaml:"max_age"`     // max age in days
+	Compress   bool   `yaml:"compress"`    // compress rotated files
 }
 
 func Load(configPath string) (*Config, error) {
@@ -105,8 +117,18 @@ func Default() *Config {
 		},
 		App: AppConfig{
 			Name:      "Waterlogger",
-			Version:   "1.0.0",
+			Version:   "1.3.0",
 			SecretKey: "your-secret-key-change-this",
+		},
+		Logging: LoggingConfig{
+			Level:      "info",
+			Format:     "console",
+			Output:     "both",
+			FilePath:   "logs/waterlogger.log",
+			MaxSize:    100,
+			MaxBackups: 3,
+			MaxAge:     28,
+			Compress:   true,
 		},
 	}
 }

@@ -1,5 +1,19 @@
 # App Development Discussion Notes
 
+---
+
+## ⚠️ IMPORTANT: VERSION MANAGEMENT
+
+**Before making ANY code changes, read:** [`VERSION_MANAGEMENT.md`](VERSION_MANAGEMENT.md)
+
+**Current Version:** 1.4.0
+
+**Repository:** https://github.com/johnzastrow/waterlogger
+
+**Key Rule:** ALWAYS increment version when making code changes. See VERSION_MANAGEMENT.md for complete instructions.
+
+---
+
 ## Initial Discussion
 
 Based on requirements.md analysis - building a web application called "Waterlogger" for tracking pool and hot tub water parameters with calculations, charting, and export capabilities.
@@ -370,7 +384,7 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - **Template Updates**: Updated all 10 HTML templates with user management navigation and build timestamps
 - **Build Process**: Created automated build script with timestamp injection
 
-#### Version 1.2 Features (Current Session)
+#### Version 1.2 Features
 - **Pool Volume Calculator**: Comprehensive volume calculation system with support for rectangular, round, oval, kidney, and L-shaped pools with varying depths
 - **Chemical Adjustment System**: Professional-grade water balance calculations with LSI/RSI indices and chemical dosing recommendations
 - **PDF Export for Adjustments**: Browser-based PDF generation with comprehensive adjustment details, chemical safety guidelines, and water balance explanations
@@ -378,6 +392,66 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - **Adjustment History Tracking**: Past adjustments display on both adjustments screen (pool-filtered) and dashboard (last 10 across all pools)
 - **Enhanced Markdown Export**: Complete adjustments section with starting/target conditions, water balance indices, and chemical recommendations
 - **Full Backup Export Update**: All new data tables included in JSON backup exports (user preferences, measurements, indices, adjustments)
+
+#### Version 1.3 Features
+- **Comprehensive Logging System**: Structured logging with zerolog for high-performance JSON and console output
+- **Log Rotation**: Automatic log rotation with configurable size, backups, and compression
+- **Request Tracing**: Unique request IDs for complete request tracing across all operations
+- **Security Audit Logging**: Comprehensive audit trail for sensitive operations
+- **Custom GORM Logger**: Database operation logging with error categorization and slow query detection
+- **Version Display Fix**: Corrected version display in UI footer
+- **Documentation Updates**: Added LOGGING.md with comprehensive logging documentation
+- **Build System Enhancements**: MSYS2 build instructions for Windows
+
+#### Version 1.5 Features (Current Session)
+- **Web-Based Backup Import**: Complete backup restore functionality from Settings page
+  - File upload interface for JSON backups
+  - Validation of file type (.json only)
+  - Real-time import progress with loading states
+  - Success/error messages with detailed feedback
+  - Automatic refresh of settings and migrations after import
+  - **Backwards compatibility**: Imports data from older versions gracefully
+    - Auto-updates database schema if needed
+    - Foreign key validation and automatic fixing
+    - Skips missing or incompatible fields without failing
+    - Handles partial imports when some data is unavailable
+  - **New API endpoint**: `POST /api/settings/import` - Import database from uploaded backup
+  - **CSS styling** for message boxes (success, warning, info boxes)
+  - Warning about data being added (not replaced)
+  - Automatic cleanup of uploaded temporary files
+
+#### Version 1.4 Features
+- **Schema Migration System**: Version-tracked database schema changes with automatic migration on startup
+  - `SchemaMigration` model tracks version, name, and timestamp
+  - Migration interface with Up() and Down() methods
+  - Transaction-wrapped migrations for atomicity
+  - Command-line tools: `-migration-status` and `-migration-rollback`
+  - MIGRATIONS.md documentation with comprehensive examples
+- **Enhanced Settings UI**: Completely redesigned settings page with:
+  - **System Information section**: App version, build date/time, database type, schema version, migrations count, server address
+  - **Database Schema Migrations section**: Complete migration history table with refresh capability
+  - **Database Management section**: Current database details, one-click backup creation, migration instructions
+- **New API Endpoints**:
+  - `GET /api/settings/migrations` - Retrieve migration history
+  - `POST /api/settings/backup` - Create database backup on demand
+  - Enhanced `GET /api/settings` - Returns comprehensive system information
+- **Database Backup System**: One-click JSON backups from web UI with auto-generated timestamped filenames (WL<timestamp>.json)
+- **Migration Testing**: Comprehensive testing of schema migrations on both SQLite and MariaDB
+- **Foreign Key Validation**: Enhanced data migration code to validate and fix all foreign key relationships
+- **Automated Deployment Scripts**:
+  - **Linux**: `deploy-linux.sh` - One-command deployment with systemd service creation
+    - Creates directory structure (`/opt/waterlogger`, `logs/`, `backups/`)
+    - Creates dedicated user with proper permissions
+    - Optional production configuration (json logging, file output)
+    - Generates systemd service file with security hardening
+    - Auto-enables service to start on boot
+  - **Windows**: `deploy-windows.bat` - One-command deployment with Windows service creation
+    - Creates directory structure (`C:\Program Files\Waterlogger`, `logs/`, `backups/`)
+    - Optional production configuration
+    - Creates Windows service with automatic restart on failure
+    - Includes service management commands
+  - **Enhanced service files** with security hardening, proper restart policies, and complete documentation
+  - **Simplified deployment**: Single command goes from binary to production-ready service
 
 ## Notes
 

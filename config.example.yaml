@@ -1,19 +1,152 @@
+# ==============================================================================
+# Waterlogger Configuration File
+# ==============================================================================
+# This is an example configuration file. Copy this to config.yaml and customize.
+# See BUILD_REQUIREMENTS.md and README.md for detailed setup instructions.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Server Configuration
+# ------------------------------------------------------------------------------
 server:
-  port: 2341
+  # Port for the web server (default: 2342)
+  # Access the application at http://localhost:2342
+  port: 2342
+
+  # Host address to bind to
+  # - "localhost" or "127.0.0.1" = local access only
+  # - "0.0.0.0" = accessible from other machines on network
   host: "localhost"
 
+# ------------------------------------------------------------------------------
+# Database Configuration
+# ------------------------------------------------------------------------------
 database:
-  type: "sqlite" # sqlite or mariadb
+  # Database type: "sqlite" or "mariadb"
+  #
+  # SQLite (default):
+  #   - Simple, zero-configuration
+  #   - Single file database
+  #   - Requires CGO (C compiler) to build
+  #   - Perfect for single-user or small deployments
+  #
+  # MariaDB:
+  #   - Better for multi-user environments
+  #   - Requires separate MariaDB server installation
+  #   - Better performance for large datasets
+  #   - Supports concurrent access better than SQLite
+  type: "sqlite"
+
+  # SQLite Configuration (used when type = "sqlite")
   sqlite:
+    # Path to the SQLite database file
+    # - Relative path: stored in application directory
+    # - Absolute path: /var/lib/waterlogger/waterlogger.db
+    # - Will be created automatically on first run
     path: "waterlogger.db"
+
+  # MariaDB Configuration (used when type = "mariadb")
+  #
+  # To use MariaDB instead of SQLite:
+  # 1. Install MariaDB server:
+  #    - Ubuntu/Debian: sudo apt install mariadb-server
+  #    - Windows: Download from https://mariadb.org/download/
+  #    - macOS: brew install mariadb
+  #
+  # 2. Create database and user:
+  #    mysql -u root -p
+  #    CREATE DATABASE waterlogger;
+  #    CREATE USER 'waterlogger'@'localhost' IDENTIFIED BY 'your-secure-password';
+  #    GRANT ALL PRIVILEGES ON waterlogger.* TO 'waterlogger'@'localhost';
+  #    FLUSH PRIVILEGES;
+  #
+  # 3. Update settings below and change type to "mariadb"
+  #
+  # 4. Migrate existing SQLite data (optional):
+  #    ./waterlogger -migrate-to-mariadb
   mariadb:
+    # MariaDB server hostname
+    # - "localhost" or "127.0.0.1" for local server
+    # - IP address or hostname for remote server
     host: "localhost"
+
+    # MariaDB server port (default: 3306)
     port: 3306
+
+    # Database username
     username: "waterlogger"
+
+    # Database password
+    # WARNING: Keep this file secure! Set appropriate file permissions:
+    #   Linux/macOS: chmod 600 config.yaml
+    #   Windows: Right-click → Properties → Security → Edit permissions
     password: "password"
+
+    # Database name (must be created beforehand)
     database: "waterlogger"
 
+# ------------------------------------------------------------------------------
+# Application Settings
+# ------------------------------------------------------------------------------
 app:
+  # Application name (displayed in UI)
   name: "Waterlogger"
-  version: "1.0.0"
+
+  # Application version (automatically updated by build process)
+  version: "1.5.0"
+
+  # Secret key for session encryption and security tokens
+  # IMPORTANT: Change this to a long, random string!
+  # Generate a secure key with:
+  #   - Linux/macOS: openssl rand -base64 32
+  #   - Windows PowerShell: -join (1..32|%{[byte](Get-Random -Max 256)}|ForEach-Object{$_.ToString('x2')})
+  # Keep this secret and never commit to version control!
   secret_key: "change-this-to-a-secure-random-string"
+
+# ------------------------------------------------------------------------------
+# Logging Configuration
+# ------------------------------------------------------------------------------
+logging:
+  # Log level: debug, info, warn, error, fatal
+  # - debug: Very verbose, includes all operations (development)
+  # - info: General information, successful operations (recommended)
+  # - warn: Warning messages, non-critical issues
+  # - error: Error messages, failed operations
+  # - fatal: Critical errors that cause shutdown
+  level: "info"
+
+  # Log format: json or console
+  # - json: Structured JSON format, good for log aggregation tools
+  # - console: Human-readable format with colors (good for development)
+  format: "console"
+
+  # Log output destination: stdout, file, both
+  # - stdout: Print to console/terminal only
+  # - file: Write to log file only
+  # - both: Print to console AND write to file (recommended)
+  output: "both"
+
+  # Log file path (used when output is "file" or "both")
+  # - Relative path: logs/waterlogger.log (in application directory)
+  # - Absolute path: /var/log/waterlogger/waterlogger.log
+  # - Directory will be created automatically if it doesn't exist
+  file_path: "logs/waterlogger.log"
+
+  # Maximum size of log file in megabytes before rotation
+  # When reached, current log is renamed and a new one is started
+  max_size: 100
+
+  # Maximum number of old log files to keep
+  # Older files are automatically deleted
+  # Set to 0 to keep all old logs
+  max_backups: 3
+
+  # Maximum number of days to keep old log files
+  # Files older than this are deleted regardless of max_backups
+  # Set to 0 to keep based on max_backups only
+  max_age: 28
+
+  # Compress old log files with gzip
+  # Saves disk space for archived logs
+  # true = compress, false = keep as plain text
+  compress: true

@@ -21,12 +21,29 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 - **PDF Export**: Professional PDF generation for adjustment details with safety guidelines and water balance explanations
 - **Dashboard Analytics**: Quick overview of recent samples, water quality status, and recent adjustments across all pools
 
+### Database Management (Version 1.4+)
+- **Schema Migration System**: Version-tracked database schema changes with automatic migration on startup
+- **Migration Management UI**: View complete migration history and status from the settings page
+- **One-Click Database Backups**: Create timestamped JSON backups directly from the web interface
+- **Web-Based Backup Import** (Version 1.5+): Upload and restore JSON backups through the Settings page with backwards compatibility
+- **Migration Commands**: Command-line tools for viewing status and rolling back migrations
+- **Cross-Database Migration**: Bidirectional data migration between SQLite and MariaDB
+- **Enhanced Settings UI**: Comprehensive system information display including app version, build info, database type, and schema version
+
+### Deployment Automation (Version 1.4+)
+- **Automated Linux Deployment**: One-command deployment script (`deploy-linux.sh`) that handles everything from directory creation to systemd service installation
+- **Automated Windows Deployment**: One-command deployment script (`deploy-windows.bat`) for Windows service installation
+- **Security Hardening**: Systemd service includes NoNewPrivileges, ProtectSystem, and other security features
+- **Production-Ready Defaults**: Optional automatic configuration for production logging settings
+- **Service Management**: Automatic service creation with restart policies and proper permissions
+
 ### Technical Features
 - **Export Functionality**: Export data to Excel, Markdown, and JSON backup formats
 - **Responsive Design**: Mobile-friendly interface with modern UI and professional favicon
-- **Database Flexibility**: Support for SQLite and MariaDB databases
+- **Database Flexibility**: Support for SQLite and MariaDB databases with migration capabilities
 - **Cross-Platform**: Single executable for Windows and Linux
 - **Build Timestamps**: Each build includes deployment tracking in the UI
+- **Structured Logging**: High-performance logging with rotation, multiple outputs, and audit trails
 
 ## Screenshots
 
@@ -47,26 +64,31 @@ A comprehensive web application for managing pool and hot tub water chemistry pa
 
 #### Option 1: Download Pre-built Binary
 
-1. Download the latest release for your platform from [Releases](https://github.com/your-org/waterlogger/releases)
+1. Download the latest release for your platform from [Releases](https://github.com/johnzastrow/waterlogger/releases)
 2. Extract the binary to your desired location
 3. Run the application
 
 #### Option 2: Build from Source
 
+**⚠️ Prerequisites:** SQLite requires CGO (C compiler). See detailed build requirements below.
+
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/waterlogger.git
+git clone https://github.com/johnzastrow/waterlogger.git
 cd waterlogger
 
-# Build with build timestamps (recommended)
-./build.sh
+# Install build tools first (see platform-specific instructions below)
 
-# Or build manually
-go build -o waterlogger cmd/waterlogger/main.go
+# Build using the build script (recommended)
+./build.sh      # Linux/macOS
+build.bat       # Windows
 
 # Run the application
-./waterlogger
+./waterlogger         # Linux/macOS
+waterlogger.exe       # Windows
 ```
+
+See the **Building and Running** section below for platform-specific setup instructions.
 
 ### First Run
 
@@ -83,125 +105,317 @@ go build -o waterlogger cmd/waterlogger/main.go
 
 #### Prerequisites
 - Go 1.21 or later
+- **MSYS2 with MinGW-w64 GCC** (required for SQLite/CGO)
 - Git (optional, for cloning)
+
+**⚠️ Important:** Waterlogger uses SQLite which requires CGO (C bindings). You must install MSYS2 with MinGW-w64 GCC.
+
+See [BUILD_REQUIREMENTS.md](BUILD_REQUIREMENTS.md) for detailed MSYS2 setup instructions.
+
+#### Quick Setup
+```cmd
+# 1. Install MSYS2 from https://www.msys2.org/
+# 2. In MSYS2 terminal, install GCC:
+pacman -S mingw-w64-x86_64-gcc
+
+# 3. Add C:\msys64\mingw64\bin to Windows PATH
+# 4. Restart terminal
+```
 
 #### Build Steps
 ```cmd
 # Clone the repository (if not already done)
-git clone https://github.com/your-org/waterlogger.git
+git clone https://github.com/johnzastrow/waterlogger.git
 cd waterlogger
 
 # Download dependencies
-go mod tidy
+go mod download
 
-# Build with timestamps (Windows PowerShell)
-$BUILD_TIME = Get-Date -Format "HH:mm:ss"
-$BUILD_DATE = Get-Date -Format "yyyy-MM-dd"
-go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
-
-# Or build manually (without timestamps)
-go build -o waterlogger.exe cmd/waterlogger/main.go
+# Build using the provided script (recommended)
+build.bat
 
 # Run the application
 waterlogger.exe
 ```
 
-#### Running as Windows Service
-1. Copy the executable to your preferred location (e.g., `C:\Program Files\Waterlogger\`)
-2. Create a Windows service using `sc create` or a service manager
-3. Configure the service to run at startup
+#### Quick Deployment (Automated)
 
-Example service creation:
+**⚡ Use the automated deployment script:**
 ```cmd
-sc create Waterlogger binpath="C:\Program Files\Waterlogger\waterlogger.exe" start=auto
-sc description Waterlogger "Pool and Hot Tub Water Management System"
-sc start Waterlogger
+REM Run as Administrator
+deploy-windows.bat
 ```
+
+This script will:
+- Create the installation directory structure (`C:\Program Files\Waterlogger`)
+- Copy files to the correct locations
+- Optionally configure for production logging
+- Create and configure the Windows service
+- Set up automatic restart on failure
+
+#### Manual Deployment
+
+1. **Create application directory and copy files:**
+   ```cmd
+   REM Create application directory structure
+   mkdir "C:\Program Files\Waterlogger"
+   mkdir "C:\Program Files\Waterlogger\logs"
+   mkdir "C:\Program Files\Waterlogger\backups"
+
+   REM Copy the executable
+   copy waterlogger.exe "C:\Program Files\Waterlogger\"
+
+   REM Copy and configure config file
+   copy config.yaml "C:\Program Files\Waterlogger\"
+
+   REM Edit C:\Program Files\Waterlogger\config.yaml for production
+   REM Recommended changes:
+   REM   logging.format: json
+   REM   logging.output: file
+   REM   logging.level: info
+   ```
+
+2. **Create Windows service:**
+   ```cmd
+   REM Create the service
+   sc create Waterlogger binpath="C:\Program Files\Waterlogger\waterlogger.exe -config C:\Program Files\Waterlogger\config.yaml" start=auto DisplayName="Waterlogger"
+
+   REM Set service description
+   sc description Waterlogger "Pool and Hot Tub Water Management System"
+
+   REM Set service to restart on failure
+   sc failure Waterlogger reset=86400 actions=restart/60000/restart/60000/restart/60000
+
+   REM Start the service
+   sc start Waterlogger
+   ```
+
+3. **Check service status:**
+   ```cmd
+   REM View service status
+   sc query Waterlogger
+
+   REM View service configuration
+   sc qc Waterlogger
+   ```
+
+4. **View logs:**
+   ```cmd
+   REM View log file (if using file logging)
+   type "C:\Program Files\Waterlogger\logs\waterlogger.log"
+
+   REM View Windows Event Log
+   eventvwr.msc
+   ```
+
+5. **Access the application:**
+   ```
+   Open your browser to http://localhost:2342
+   Default credentials (created on first run):
+   Username: admin
+   Password: admin
+
+   ⚠️ IMPORTANT: Change the default password immediately after first login!
+   ```
+
+6. **Manage the service:**
+   ```cmd
+   REM Stop the service
+   sc stop Waterlogger
+
+   REM Start the service
+   sc start Waterlogger
+
+   REM Delete the service (if needed)
+   sc delete Waterlogger
+   ```
 
 ### Linux
 
 #### Prerequisites
 - Go 1.21 or later
+- **Build tools** (gcc, make - usually pre-installed)
 - Git (optional, for cloning)
+
+**⚠️ Important:** Waterlogger uses SQLite which requires CGO (C bindings).
+
+#### Quick Setup
+```bash
+# Install build tools (if not already installed)
+# Ubuntu/Debian:
+sudo apt install build-essential
+
+# Fedora/RHEL:
+sudo dnf groupinstall "Development Tools"
+```
+
+See [BUILD_REQUIREMENTS.md](BUILD_REQUIREMENTS.md) for detailed instructions.
 
 #### Build Steps
 ```bash
 # Clone the repository (if not already done)
-git clone https://github.com/your-org/waterlogger.git
+git clone https://github.com/johnzastrow/waterlogger.git
 cd waterlogger
 
 # Download dependencies
-go mod tidy
+go mod download
 
-# Build with timestamps (recommended)
+# Build using the provided script (recommended)
+chmod +x build.sh
 ./build.sh
-
-# Or build manually
-go build -o waterlogger cmd/waterlogger/main.go
-
-# Make executable
-chmod +x waterlogger
 
 # Run the application
 ./waterlogger
 ```
 
-#### Running as Linux Service (systemd)
-1. Copy the executable to `/usr/local/bin/waterlogger`
-2. Create a systemd service file:
+#### Quick Deployment (Automated)
 
+**⚡ Use the automated deployment script:**
 ```bash
-sudo tee /etc/systemd/system/waterlogger.service > /dev/null <<EOF
+# Run with sudo
+sudo ./deploy-linux.sh
+```
+
+This script will:
+- Create the installation directory structure (`/opt/waterlogger`)
+- Copy files to the correct locations
+- Create dedicated `waterlogger` user
+- Optionally configure for production logging
+- Create and enable the systemd service
+- Set up security hardening
+
+#### Manual Deployment
+
+1. **Create application directory and copy files:**
+   ```bash
+   # Create application directory structure
+   sudo mkdir -p /opt/waterlogger
+   sudo mkdir -p /opt/waterlogger/logs
+   sudo mkdir -p /opt/waterlogger/backups
+
+   # Copy the executable
+   sudo cp waterlogger /opt/waterlogger/
+
+   # Copy and configure config file
+   sudo cp config.yaml /opt/waterlogger/
+
+   # Edit config for production (optional but recommended)
+   sudo nano /opt/waterlogger/config.yaml
+   # Recommended changes for production:
+   #   logging.format: json
+   #   logging.output: file
+   #   logging.level: info
+
+   # Secure the config file
+   sudo chmod 600 /opt/waterlogger/config.yaml
+   ```
+
+2. **Create a dedicated user:**
+   ```bash
+   sudo useradd -r -s /bin/false waterlogger
+   sudo chown -R waterlogger:waterlogger /opt/waterlogger
+   ```
+
+3. **Create systemd service file:**
+<pre>
+sudo tee /etc/systemd/system/waterlogger.service > /dev/null <<'EOF' 
 [Unit]
 Description=Waterlogger - Pool and Hot Tub Water Management System
 After=network.target
+Documentation=https://github.com/johnzastrow/waterlogger
 
 [Service]
 Type=simple
 User=waterlogger
-WorkingDirectory=/var/lib/waterlogger
-ExecStart=/usr/local/bin/waterlogger
+Group=waterlogger
+WorkingDirectory=/opt/waterlogger
+
+# Environment
+Environment=GIN_MODE=release
+
+# Execution
+ExecStart=/opt/waterlogger/waterlogger -config /opt/waterlogger/config.yaml
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=waterlogger
+
+# Restart policy
 Restart=always
 RestartSec=10
+
+# Security hardening (optional but recommended)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/waterlogger
+
+# Resource limits (optional)
+#LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
 EOF
-```
+</pre>
 
-3. Enable and start the service:
-```bash
-# Create user and directory
-sudo useradd -r -s /bin/false waterlogger
-sudo mkdir -p /var/lib/waterlogger
-sudo chown waterlogger:waterlogger /var/lib/waterlogger
+4. **Enable and start the service:**
+   ```bash
+   # Reload systemd to recognize new service
+   sudo systemctl daemon-reload
 
-# Enable and start service
-sudo systemctl daemon-reload
-sudo systemctl enable waterlogger
-sudo systemctl start waterlogger
+   # Enable service to start on boot
+   sudo systemctl enable waterlogger
 
-# Check status
-sudo systemctl status waterlogger
-```
+   # Start the service now
+   sudo systemctl start waterlogger
+
+   # Check status
+   sudo systemctl status waterlogger
+   ```
+
+5. **View logs:**
+   ```bash
+   # Follow live logs (from journald)
+   sudo journalctl -u waterlogger -f
+
+   # View recent logs
+   sudo journalctl -u waterlogger -n 100
+
+   # View log file (if using file logging)
+   sudo tail -f /opt/waterlogger/logs/waterlogger.log
+   ```
+
+6. **Access the application:**
+   ```
+   Open your browser to http://your-server-ip:2342
+   Default credentials (created on first run):
+   Username: admin
+   Password: admin
+
+   ⚠️ IMPORTANT: Change the default password immediately after first login!
+   ```
 
 ### Cross-Platform Building
 
-Build for multiple platforms with timestamps:
+**⚠️ Important:** Cross-compiling with CGO is complex because SQLite requires platform-specific C compilers.
 
+**Recommended approach:** Build on the target platform using the provided build scripts:
+- **Windows:** Use `build.bat` with MSYS2 installed
+- **Linux:** Use `build.sh` with build-essential installed
+- **macOS:** Use `build.sh` with Xcode Command Line Tools installed
+
+**For cross-compilation**, see [BUILD_REQUIREMENTS.md](BUILD_REQUIREMENTS.md) for detailed instructions on setting up cross-compilers.
+
+Example for Linux → Windows (requires mingw-w64 cross-compiler):
 ```bash
-# Set build timestamp variables
-BUILD_TIME=$(date '+%H:%M:%S')
-BUILD_DATE=$(date '+%Y-%m-%d')
+# Install cross-compiler on Linux
+sudo apt install gcc-mingw-w64
 
-# Build for Windows (from any platform)
-GOOS=windows GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
-
-# Build for Linux (from any platform)
-GOOS=linux GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger cmd/waterlogger/main.go
-
-# Build for macOS (from any platform)
-GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger-mac cmd/waterlogger/main.go
+# Cross-compile for Windows
+CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc \
+  go build -o waterlogger.exe ./cmd/waterlogger
 ```
 
 ### Build Timestamps
@@ -217,37 +431,49 @@ The application includes build timestamp functionality that displays when the bi
 
 **Linux/macOS:**
 ```bash
-# Use the provided build script
+# Use the provided build script (recommended)
 ./build.sh
-
-# Or manually
-BUILD_TIME=$(date '+%H:%M:%S') BUILD_DATE=$(date '+%Y-%m-%d') \
-go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger cmd/waterlogger/main.go
 ```
 
-**Windows PowerShell:**
-```powershell
-$BUILD_TIME = Get-Date -Format "HH:mm:ss"
-$BUILD_DATE = Get-Date -Format "yyyy-MM-dd"
-go build -ldflags "-X main.BuildTime=$BUILD_TIME -X main.BuildDate=$BUILD_DATE" -o waterlogger.exe cmd/waterlogger/main.go
+The build script automatically sets CGO_ENABLED=1 and injects build timestamps.
+
+**Windows:**
+```cmd
+# Use the provided build script (recommended)
+build.bat
 ```
+
+The build script automatically sets CGO_ENABLED=1, checks for GCC, and injects build timestamps.
 
 ## Configuration
 
 ### Configuration File
 
-The application uses a YAML configuration file (`config.yaml`) with the following structure:
+The application uses a YAML configuration file (`config.yaml`). A fully commented example configuration is provided in `config.example.yaml`.
 
+**First-time setup:**
+```bash
+cp config.example.yaml config.yaml
+# Edit config.yaml with your settings
+```
+
+The `config.example.yaml` file includes detailed comments explaining:
+- Server settings (port, host)
+- **Database configuration** (SQLite vs MariaDB with complete setup instructions)
+- Application settings (secret key generation)
+- Logging options (levels, formats, rotation)
+
+**Basic configuration structure:**
 ```yaml
 server:
-  port: 2342
-  host: "localhost"
+  port: 2342              # Web server port
+  host: "localhost"       # Bind address
 
 database:
-  type: "sqlite" # sqlite or mariadb
+  type: "sqlite"          # "sqlite" or "mariadb"
   sqlite:
     path: "waterlogger.db"
-  mariadb:
+  mariadb:                # See config.example.yaml for setup instructions
     host: "localhost"
     port: 3306
     username: "waterlogger"
@@ -256,9 +482,17 @@ database:
 
 app:
   name: "Waterlogger"
-  version: "1.2.0"
-  secret_key: "your-secret-key-change-this"
+  version: "1.4.0"
+  secret_key: "change-this-to-a-secure-random-string"
+
+logging:
+  level: "info"           # debug, info, warn, error, fatal
+  format: "console"       # json, console
+  output: "both"          # stdout, file, both
+  # ... see config.example.yaml for full logging options
 ```
+
+**For detailed MariaDB setup and migration instructions, see the comments in `config.example.yaml`.**
 
 ### Server Configuration
 
@@ -357,34 +591,36 @@ When running in production mode:
 
 #### Logging Configuration
 
-**Basic Logging to File:**
+Waterlogger includes built-in structured logging with automatic log rotation (see LOGGING.md for details).
 
-```bash
-# Linux/macOS
-./waterlogger > /var/log/waterlogger.log 2>&1
+**Configure logging in `config.yaml`:**
 
-# Windows
-waterlogger.exe > waterlogger.log 2>&1
+```yaml
+logging:
+    level: info           # debug, info, warn, error, fatal
+    format: console       # json (production), console (development)
+    output: both          # stdout, file, both
+    file_path: logs/waterlogger.log
+    max_size: 100         # MB
+    max_backups: 3        # number of old log files to keep
+    max_age: 28           # days
+    compress: true        # compress old log files
 ```
 
-**Production Logging with Rotation:**
+**Recommended production settings:**
+```yaml
+logging:
+    level: info
+    format: json
+    output: file
+```
 
-For production environments, consider using log rotation:
-
-```bash
-# Linux with logrotate
-./waterlogger > /var/log/waterlogger.log 2>&1 &
-
-# Create /etc/logrotate.d/waterlogger:
-# /var/log/waterlogger.log {
-#     daily
-#     rotate 7
-#     compress
-#     delaycompress
-#     missingok
-#     notifempty
-#     create 0644 waterlogger waterlogger
-# }
+**Recommended development settings:**
+```yaml
+logging:
+    level: debug
+    format: console
+    output: both
 ```
 
 **Debug Mode (Development Only):**
@@ -398,35 +634,6 @@ GIN_MODE=debug ./waterlogger
 # Windows
 set GIN_MODE=debug
 waterlogger.exe
-```
-
-#### Systemd Service with Logging
-
-For Linux systems using systemd, create a service file that includes proper logging:
-
-```ini
-[Unit]
-Description=Waterlogger Service
-After=network.target
-
-[Service]
-Type=simple
-User=waterlogger
-WorkingDirectory=/opt/waterlogger
-Environment=GIN_MODE=release
-ExecStart=/opt/waterlogger/waterlogger -config /opt/waterlogger/config.yaml
-StandardOutput=journal
-StandardError=journal
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-```
-
-View logs with:
-```bash
-sudo journalctl -u waterlogger -f
 ```
 
 ### Command Line Options
@@ -478,21 +685,92 @@ echo "newpassword" | ./waterlogger -reset-password username
 ### Database Setup
 
 #### SQLite (Default)
-- No additional setup required
-- Database file is created automatically
-- Recommended for single-user or small deployments
+- **No additional setup required** - database file is created automatically
+- Single file storage: `waterlogger.db` (configurable in `config.yaml`)
+- Requires CGO (C compiler) to build the application
+- Perfect for:
+  - Single-user deployments
+  - Small to medium datasets
+  - Simple backup/restore (just copy the .db file)
+  - No separate database server needed
 
-#### MariaDB
-1. Install MariaDB server
-2. Create database and user:
-```sql
-CREATE DATABASE waterlogger;
-CREATE USER 'waterlogger'@'localhost' IDENTIFIED BY 'your-password';
-GRANT ALL PRIVILEGES ON waterlogger.* TO 'waterlogger'@'localhost';
-FLUSH PRIVILEGES;
+#### MariaDB (Optional)
+**When to use MariaDB:**
+- Multi-user environments with concurrent access
+- Large datasets (thousands of samples)
+- Remote database server requirements
+- Better performance for complex queries
+
+**Setup Instructions:**
+
+1. **Install MariaDB Server**
+   ```bash
+   # Ubuntu/Debian
+   sudo apt install mariadb-server
+
+   # Windows: Download from https://mariadb.org/download/
+   # macOS
+   brew install mariadb
+   ```
+
+2. **Create Database and User**
+   ```bash
+   # Login to MariaDB as root
+   mysql -u root -p
+   ```
+
+   Then run these SQL commands:
+   ```sql
+   CREATE DATABASE waterlogger;
+   CREATE USER 'waterlogger'@'localhost' IDENTIFIED BY 'your-secure-password';
+   GRANT ALL PRIVILEGES ON waterlogger.* TO 'waterlogger'@'localhost';
+   FLUSH PRIVILEGES;
+   EXIT;
+   ```
+
+3. **Update Configuration**
+
+   Edit `config.yaml` and change the database type:
+   ```yaml
+   database:
+     type: "mariadb"  # Changed from "sqlite"
+     mariadb:
+       host: "localhost"
+       port: 3306
+       username: "waterlogger"
+       password: "your-secure-password"  # Use the password from step 2
+       database: "waterlogger"
+   ```
+
+   See `config.example.yaml` for detailed configuration comments.
+
+4. **Migrate Existing SQLite Data (Optional)**
+
+   If you have existing data in SQLite and want to move it to MariaDB:
+   ```bash
+   # After updating config.yaml to MariaDB settings
+   ./waterlogger -migrate-to-mariadb
+   ```
+
+   This will:
+   - Export all data from your SQLite database
+   - Create tables in MariaDB
+   - Import all data to MariaDB
+   - Preserve all relationships and data integrity
+
+5. **Start the Application**
+   ```bash
+   ./waterlogger
+   ```
+
+   The application will now use MariaDB for all data storage.
+
+**Migrating Back to SQLite:**
+```bash
+# Update config.yaml to use type: "sqlite"
+# Then run:
+./waterlogger -migrate-to-sqlite
 ```
-3. Update configuration file with connection details
-4. Restart the application
 
 ## Usage
 
@@ -662,9 +940,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Issues**: Report bugs and feature requests on [GitHub Issues](https://github.com/your-org/waterlogger/issues)
-- **Discussions**: Join the community on [GitHub Discussions](https://github.com/your-org/waterlogger/discussions)
-- **Documentation**: Visit the [Wiki](https://github.com/your-org/waterlogger/wiki) for detailed guides
+- **Issues**: Report bugs and feature requests on [GitHub Issues](https://github.com/johnzastrow/waterlogger/issues)
+- **Discussions**: Join the community on [GitHub Discussions](https://github.com/johnzastrow/waterlogger/discussions)
+- **Documentation**: Visit the [Wiki](https://github.com/johnzastrow/waterlogger/wiki) for detailed guides
 
 ## Acknowledgments
 
