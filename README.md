@@ -130,6 +130,8 @@ cd waterlogger
 
 # Download dependencies
 go mod download
+go mod tidy
+
 
 # Build using the provided script (recommended)
 build.bat
