@@ -37,6 +37,10 @@ Thumbs.db
 # waterlogger
 waterlogger.exe
 waterlogger-mac
+waterlogger-linux
+waterlogger.log
+waterlogger
+
 # waterlogger.db
 config.yaml
 logs/
