@@ -23,7 +23,19 @@
       "Bash(then)",
       "Bash(echo:*)",
       "Bash(fi)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Read(//home/jcz/**)",
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(go clean:*)",
+      "Bash(cat:*)",
+      "Bash(go list:*)",
+      "Bash(go mod graph:*)",
+      "Bash(go version:*)",
+      "Bash(go env:*)",
+      "Bash(sudo systemctl stop:*)",
+      "Bash(sudo systemctl status:*)",
+      "Read(//opt/**)"
     ],
     "deny": [],
     "ask": []
