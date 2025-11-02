@@ -28,6 +28,12 @@ if [ ! -f "config.yaml" ]; then
     exit 1
 fi
 
+# Check if web directory exists
+if [ ! -d "web" ]; then
+    echo "⚠️  web directory not found - templates and static files may be missing"
+    echo "   (This is only required if the binary doesn't have embedded assets)"
+fi
+
 echo "✅ Found waterlogger binary and config.yaml"
 echo ""
 
@@ -44,6 +50,15 @@ mkdir -p "$INSTALL_DIR/backups"
 echo "📋 Copying files..."
 cp waterlogger "$INSTALL_DIR/"
 cp config.yaml "$INSTALL_DIR/"
+
+# Copy web directory if it exists (contains templates and static assets)
+if [ -d "web" ]; then
+    echo "📋 Copying web assets (templates and static files)..."
+    cp -r web "$INSTALL_DIR/"
+    echo "✅ Web assets copied"
+else
+    echo "⚠️  Web directory not copied (binary must have embedded assets)"
+fi
 
 # Make executable
 chmod +x "$INSTALL_DIR/waterlogger"

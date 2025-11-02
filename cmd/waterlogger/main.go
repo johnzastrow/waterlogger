@@ -22,6 +22,11 @@ import (
 	"waterlogger/internal/models"
 )
 
+// Note: Embed directives for web assets commented out due to build issues.
+// The alternative approach loads templates and static files from the filesystem.
+// TODO: Investigate and implement proper embedded assets in future versions.
+// var webFS embed.FS
+
 // Build information - set at compile time
 var (
 	BuildTime = "unknown"
@@ -238,8 +243,27 @@ func main() {
 	router.Use(middleware.LoggingMiddleware())
 	router.Use(middleware.AuditLoggingMiddleware())
 
-	// Load HTML templates
-	templatesPattern := filepath.Join("web", "templates", "*.html")
+	// Load HTML templates from filesystem
+	// Try multiple possible locations for templates directory
+	templatesPattern := ""
+	possiblePaths := []string{
+		filepath.Join("web", "templates", "*.html"),           // Current directory
+		filepath.Join("/opt/waterlogger/web", "templates", "*.html"), // Production location
+		filepath.Join("./web", "templates", "*.html"),         // Explicit relative
+	}
+
+	for _, pattern := range possiblePaths {
+		entries, err := filepath.Glob(pattern)
+		if err == nil && len(entries) > 0 {
+			templatesPattern = pattern
+			break
+		}
+	}
+
+	if templatesPattern == "" {
+		logging.Fatal().Msg("Could not find HTML templates in any expected location")
+	}
+
 	router.LoadHTMLGlob(templatesPattern)
 	logging.Info().Str("pattern", templatesPattern).Msg("Loaded HTML templates")
 
@@ -251,8 +275,28 @@ func main() {
 		c.Next()
 	})
 
-	// Serve static files
-	router.Static("/static", "./web/static")
+	// Serve static files from filesystem
+	// Try multiple possible locations for static directory
+	staticDir := ""
+	possibleDirs := []string{
+		"./web/static",                    // Current directory
+		"web/static",                      // Relative
+		"/opt/waterlogger/web/static",     // Production location
+	}
+
+	for _, dir := range possibleDirs {
+		if _, err := os.Stat(dir); err == nil {
+			staticDir = dir
+			break
+		}
+	}
+
+	if staticDir != "" {
+		router.Static("/static", staticDir)
+		logging.Info().Str("directory", staticDir).Msg("Serving static files")
+	} else {
+		logging.Warn().Msg("Static directory not found in expected locations")
+	}
 
 	// Setup middleware
 	router.Use(middleware.CORSMiddleware())
@@ -447,4 +491,36 @@ func getPasswordFromInput(prompt string) (string, error) {
 	}
 	
 	return strings.TrimSpace(password), nil
+}
+
+// getContentType returns the appropriate content type for a file based on its extension
+func getContentType(filepath string) string {
+	switch {
+	case strings.HasSuffix(filepath, ".css"):
+		return "text/css"
+	case strings.HasSuffix(filepath, ".js"):
+		return "application/javascript"
+	case strings.HasSuffix(filepath, ".json"):
+		return "application/json"
+	case strings.HasSuffix(filepath, ".png"):
+		return "image/png"
+	case strings.HasSuffix(filepath, ".jpg"), strings.HasSuffix(filepath, ".jpeg"):
+		return "image/jpeg"
+	case strings.HasSuffix(filepath, ".gif"):
+		return "image/gif"
+	case strings.HasSuffix(filepath, ".svg"):
+		return "image/svg+xml"
+	case strings.HasSuffix(filepath, ".ico"):
+		return "image/x-icon"
+	case strings.HasSuffix(filepath, ".woff"):
+		return "font/woff"
+	case strings.HasSuffix(filepath, ".woff2"):
+		return "font/woff2"
+	case strings.HasSuffix(filepath, ".ttf"):
+		return "font/ttf"
+	case strings.HasSuffix(filepath, ".eot"):
+		return "application/vnd.ms-fontobject"
+	default:
+		return "application/octet-stream"
+	}
 }

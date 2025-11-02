@@ -400,7 +400,7 @@ Based on requirements.md analysis - building a web application called "Waterlogg
 - **Security Audit Logging**: Comprehensive audit trail for sensitive operations
 - **Custom GORM Logger**: Database operation logging with error categorization and slow query detection
 - **Version Display Fix**: Corrected version display in UI footer
-- **Documentation Updates**: Added LOGGING.md with comprehensive logging documentation
+- **Documentation Updates**: Added [LOGGING.md](LOGGING.md) with comprehensive logging documentation
 - **Build System Enhancements**: MSYS2 build instructions for Windows
 
 #### Version 1.5 Features (Current Session)
@@ -426,7 +426,7 @@ Based on requirements.md analysis - building a web application called "Waterlogg
   - Migration interface with Up() and Down() methods
   - Transaction-wrapped migrations for atomicity
   - Command-line tools: `-migration-status` and `-migration-rollback`
-  - MIGRATIONS.md documentation with comprehensive examples
+  - [MIGRATIONS.md](MIGRATIONS.md) documentation with comprehensive examples
 - **Enhanced Settings UI**: Completely redesigned settings page with:
   - **System Information section**: App version, build date/time, database type, schema version, migrations count, server address
   - **Database Schema Migrations section**: Complete migration history table with refresh capability

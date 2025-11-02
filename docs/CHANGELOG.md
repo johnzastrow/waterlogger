@@ -158,6 +158,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migration runner supports pending migration detection
 - Rollback validation prevents reverting other developers' changes
 
+## [1.2.0] - 2025-10-25
+
+### Added - Pool Volume Calculator, Chemical Adjustments, and PDF Export
+
+#### Pool Volume Calculator
+- **Comprehensive volume calculation system** supporting multiple pool shapes:
+  - Rectangular pools with variable depth
+  - Round/circular pools
+  - Oval pools
+  - Kidney-shaped pools
+  - L-shaped pools with dual sections
+- **Advanced features:**
+  - Steps configuration (width, length, depth)
+  - Attached spa calculations
+  - Dynamic volume updates
+  - Visual pool shape preview
+
+#### Chemical Adjustment System
+- **Professional-grade water balance calculations** with:
+  - Starting and target water conditions
+  - LSI (Langelier Saturation Index) calculations
+  - RSI (Ryznar Stability Index) calculations
+  - Water balance recommendations
+- **11 different pool chemicals supported:**
+  - Muriatic Acid
+  - Sodium Bisulfate
+  - Soda Ash
+  - Borax
+  - Sodium Bicarbonate
+  - Calcium Chloride
+  - Bleach
+  - Trichlor
+  - Dichlor
+  - Cal-Hypo
+  - Salt
+- **Chemical dosing calculations** based on:
+  - Pool volume
+  - Starting parameters
+  - Target parameters
+  - Water balance indices
+
+#### Adjustment History Tracking
+- **Complete adjustment records** including:
+  - Starting water conditions
+  - Target water conditions
+  - Chemical additions (in fluid ounces or pounds)
+  - Water balance before/after
+  - User notes
+  - Timestamp tracking
+- **Dashboard display** showing last 10 adjustments across all pools
+- **Pool-filtered history** on adjustments management page
+- **Search and filtering** capabilities
+
+#### PDF Export
+- **Browser-based PDF generation** for adjustment details
+- **Professional report formatting** with:
+  - Adjustment summary
+  - Chemical additions list
+  - Water balance explanations
+  - Safety guidelines for chemicals
+  - Printable format
+  - Print-friendly styling
+
+#### Enhanced Features
+- **Dashboard Analytics** with recent adjustments widget
+- **Water Balance Analysis** with color-coded LSI/RSI indicators
+- **JSON Backup Export** with all tables and relationships
+- **Professional Favicon** integration across all pages
+- **Enhanced Markdown Export** including adjustment sections
+- **Improvement fixes** for build timestamp display and PDF generation
+
+### Changed
+- Updated dashboard to include adjustment history
+- Enhanced markdown export structure with adjustments section
+- Improved water balance visualization with indicators
+
+### Technical Details
+- Adjustments model with comprehensive field support
+- LSI/RSI calculation functions
+- Chemical dosing algorithms
+- JSON backup includes all new data types
+- PDF generation using browser print API
+
 ## [1.3.0] - 2025-10-26
 
 ### Added - Comprehensive Logging System
