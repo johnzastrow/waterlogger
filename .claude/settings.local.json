@@ -35,7 +35,9 @@
       "Bash(go env:*)",
       "Bash(sudo systemctl stop:*)",
       "Bash(sudo systemctl status:*)",
-      "Read(//opt/**)"
+      "Read(//opt/**)",
+      "Bash(bash:*)",
+      "Bash(dos2unix:*)"
     ],
     "deny": [],
     "ask": []

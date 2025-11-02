@@ -127,7 +127,6 @@ func Initialize(cfg *Config) error {
 	// Create zerolog logger
 	zlog := zerolog.New(output).With().
 		Timestamp().
-		Caller().
 		Logger()
 
 	globalLogger = &Logger{

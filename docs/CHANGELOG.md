@@ -16,6 +16,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - TBD
 
+## [1.3.1] - 2025-11-01
+
+### Fixed - Production Logging Path Issue
+- **Logger fix**: Removed `.Caller()` from zerolog logger initialization
+  - **Issue**: Development file paths (e.g., `../../home/jcz/waterlogger/waterlogger/internal/middleware/logging.go`) were embedded in compiled binary and appearing in production logs
+  - **Solution**: Removed call information from logs to prevent path disclosure and directory structure dependencies
+  - **Impact**: Binary can now be deployed from any location (including `/opt`) without embedded development paths in logs
+  - **Benefit**: Improved security by not exposing source code structure, and improved portability for deployments in different directory structures
+
+### Technical Details
+- Modified `internal/logging/logger.go:130` to remove `.Caller()` from logger chain
+- Production logs remain clean and consistent regardless of deployment location
+- Request tracing via Request IDs is unaffected and continues to work normally
+
 ## [1.5.0] - 2025-10-27
 
 ### Added - Database Backup Import & Automated Deployment

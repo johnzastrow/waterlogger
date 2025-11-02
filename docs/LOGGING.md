@@ -1,7 +1,7 @@
 # Waterlogger Logging Implementation
 
-**Date:** 2025-10-26
-**Version:** 1.4.0
+**Date:** 2025-11-01
+**Version:** 1.3.1
 **Status:** ✅ Complete
 
 ---
@@ -115,6 +115,13 @@ Color-coded by status:
 - **2xx** - Success (INFO level)
 - **4xx** - Client error (INFO level)
 - **5xx** - Server error (INFO level with error context)
+
+### ✅ **10. Production-Ready Logger Configuration (v1.3.1+)**
+- **Removed caller information logging** for production safety and portability
+  - Caller information (`.Caller()`) was embedding development file paths in logs
+  - Binary can now be deployed from any location (e.g., `/opt`) without exposing source code structure
+  - Request tracing via Request IDs remains fully functional for troubleshooting
+  - Improves security by not disclosing source code paths in logs
 
 ---
 
