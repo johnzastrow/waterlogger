@@ -37,7 +37,8 @@
       "Bash(sudo systemctl status:*)",
       "Read(//opt/**)",
       "Bash(bash:*)",
-      "Bash(dos2unix:*)"
+      "Bash(dos2unix:*)",
+      "Bash(for file in web/templates/{dashboard,pools,kits,samples,export,settings,adjustments,setup,login,404}.html)"
     ],
     "deny": [],
     "ask": []

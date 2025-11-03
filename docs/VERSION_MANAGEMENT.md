@@ -4,7 +4,7 @@
 
 **Repository:** https://github.com/johnzastrow/waterlogger
 
-### Current Version: 1.4.0
+### Current Version: 1.5.1
 
 ---
 
@@ -291,8 +291,11 @@ After updating version, verify:
 
 ## Current Version History
 
+- **1.5.1** (2025-11-01) - Production logging path fix
+- **1.5.0** (2025-10-27) - Database backup import & automated deployment
+- **1.4.0** (2025-10-27) - Database schema migration system & enhanced settings UI
 - **1.3.0** (2025-10-26) - Comprehensive logging system with zerolog
-- **1.2.0** (Previous) - Pool volume calculator, chemical adjustments
+- **1.2.0** (2025-10-25) - Pool volume calculator, chemical adjustments
 - **1.0.0** (2024-07-14) - Initial release
 
 ---
@@ -308,5 +311,5 @@ When in doubt, use MINOR for any significant change.
 
 ---
 
-**Last Updated:** 2025-10-26
+**Last Updated:** 2025-11-01
 **Maintained By:** Claude Code AI Assistant

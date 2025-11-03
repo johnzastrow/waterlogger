@@ -2,7 +2,7 @@
 
 # Variables
 APP_NAME := waterlogger
-VERSION := 1.3.0
+VERSION := 1.5.1
 BUILD_DIR := build
 DIST_DIR := dist
 MAIN_FILE := cmd/waterlogger/main.go

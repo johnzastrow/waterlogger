@@ -6,7 +6,7 @@
 
 **Before making ANY code changes, read:** [`VERSION_MANAGEMENT.md`](VERSION_MANAGEMENT.md)
 
-**Current Version:** 1.3.1
+**Current Version:** 1.5.1
 
 **Repository:** https://github.com/johnzastrow/waterlogger
 

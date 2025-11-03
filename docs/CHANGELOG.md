@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - TBD
 
-## [1.3.1] - 2025-11-01
+## [1.5.1] - 2025-11-01
 
 ### Fixed - Production Logging Path Issue
 - **Logger fix**: Removed `.Caller()` from zerolog logger initialization

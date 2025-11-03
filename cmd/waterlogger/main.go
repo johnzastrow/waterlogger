@@ -59,7 +59,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Println("Waterlogger v1.5.0")
+		fmt.Println("Waterlogger v1.5.1")
 		os.Exit(0)
 	}
 
@@ -127,7 +127,7 @@ func main() {
 	}
 
 	logging.Info().Msg("Waterlogger starting...")
-	logging.Info().Str("version", "1.3.0").Str("build_time", BuildTime).Str("build_date", BuildDate).Msg("Build information")
+	logging.Info().Str("version", "1.5.1").Str("build_time", BuildTime).Str("build_date", BuildDate).Msg("Build information")
 
 	// Initialize database
 	db, err := database.NewDB(cfg)

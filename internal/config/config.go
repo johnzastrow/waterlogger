@@ -117,7 +117,7 @@ func Default() *Config {
 		},
 		App: AppConfig{
 			Name:      "Waterlogger",
-			Version:   "1.3.0",
+			Version:   "1.5.1",
 			SecretKey: "your-secret-key-change-this",
 		},
 		Logging: LoggingConfig{

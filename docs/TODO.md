@@ -1,8 +1,8 @@
 # Waterlogger TODO List
 
-**Last Updated:** 2025-10-27
-**Version:** 1.5.0
-**Status:** Core functionality complete, logging system complete, schema migrations complete, backup import complete, automated deployment complete, production features incomplete
+**Last Updated:** 2025-11-01
+**Version:** 1.5.1
+**Status:** Core functionality complete, logging system complete, schema migrations complete, backup import complete, automated deployment complete, production logging fixed, production features incomplete
 
 ---
 
